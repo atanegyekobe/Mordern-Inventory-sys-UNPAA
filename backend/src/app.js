@@ -6,31 +6,47 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
-const routesModule = require("./routes");
+const routesModule = require("./routes/index.js");
 const errorHandlerModule = require("./middleware/errorHandler");
 const config = require("./config/env");
 
-const unwrapModuleFunction = (candidate) => {
-  let current = candidate;
-  let guard = 0;
+const isExpressMiddleware = (candidate) => typeof candidate === "function";
 
-  while (current && typeof current !== "function" && typeof current === "object" && "default" in current) {
-    current = current.default;
-    guard += 1;
+const extractMiddleware = (candidate, depth = 0) => {
+  if (isExpressMiddleware(candidate)) {
+    return candidate;
+  }
 
-    if (guard > 5) {
-      break;
+  if (!candidate || typeof candidate !== "object" || depth > 6) {
+    return null;
+  }
+
+  if ("default" in candidate) {
+    const fromDefault = extractMiddleware(candidate.default, depth + 1);
+    if (fromDefault) {
+      return fromDefault;
     }
   }
 
-  return current;
+  for (const value of Object.values(candidate)) {
+    const extracted = extractMiddleware(value, depth + 1);
+    if (extracted) {
+      return extracted;
+    }
+  }
+
+  return null;
 };
 
 const ensureMiddleware = (candidate, name) => {
-  const resolved = unwrapModuleFunction(candidate);
-  if (typeof resolved !== "function") {
+  const resolved = extractMiddleware(candidate);
+  if (!resolved) {
     const shape = resolved && typeof resolved === "object" ? Object.keys(resolved).join(",") : typeof resolved;
-    throw new TypeError(`${name} must be an Express middleware function. Received: ${shape}`);
+    const candidateShape =
+      candidate && typeof candidate === "object" ? Object.keys(candidate).join(",") : typeof candidate;
+    throw new TypeError(
+      `${name} must be an Express middleware function. Received: ${shape || "unknown"}; candidate shape: ${candidateShape || "unknown"}`
+    );
   }
   return resolved;
 };
