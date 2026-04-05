@@ -1,6 +1,35 @@
 require("../config/env");
-const sequelize = require("../config/database");
+const bcrypt = require("bcrypt");
+const { sequelize } = require("../models");
 const { randomUUID } = require("crypto");
+
+const tableExists = async (tableName) => {
+  const [rows] = await sequelize.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = :tableName
+      ) AS exists;
+    `,
+    {
+      replacements: { tableName },
+    }
+  );
+
+  return Boolean(rows[0]?.exists);
+};
+
+const ensureBaseSchema = async () => {
+  const usersExists = await tableExists("users");
+  if (usersExists) {
+    return;
+  }
+
+  console.log("Users table not found. Bootstrapping base schema via Sequelize sync...");
+  await sequelize.sync();
+  console.log("Base schema bootstrap complete.");
+};
 
 const migrations = [
   {
@@ -284,9 +313,31 @@ const migrations = [
           LIMIT 1;
         `);
 
-        const ownerId = ownerRows[0]?.id || null;
+        let ownerId = ownerRows[0]?.id || null;
         if (!ownerId) {
-          throw new Error("Cannot create default shop: users table has no rows.");
+          const bootstrapOwnerId = randomUUID();
+          const bootstrapEmail = `bootstrap-owner-${Date.now()}@local.invalid`;
+          const bootstrapPasswordHash = await bcrypt.hash(randomUUID(), 10);
+
+          await sequelize.query(
+            `
+              INSERT INTO users (id, name, email, password_hash, role, created_at, updated_at)
+              VALUES (:id, :name, :email, :passwordHash, 'admin', NOW(), NOW())
+            `,
+            {
+              replacements: {
+                id: bootstrapOwnerId,
+                name: "Bootstrap Owner",
+                email: bootstrapEmail,
+                passwordHash: bootstrapPasswordHash,
+              },
+            }
+          );
+
+          ownerId = bootstrapOwnerId;
+          console.log(
+            `No users found during shop migration. Created bootstrap owner user (${bootstrapEmail}).`
+          );
         }
 
         defaultShopId = randomUUID();
@@ -772,6 +823,8 @@ const run = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database connection established.");
+
+    await ensureBaseSchema();
 
     await ensureMigrationsTable();
 
