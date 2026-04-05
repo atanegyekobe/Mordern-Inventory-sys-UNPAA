@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/useToast";
 
 type VerifyState = "verifying" | "error";
 
-export default function CheckoutVerifyPage() {
+function CheckoutVerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -93,5 +93,29 @@ export default function CheckoutVerifyPage() {
         </section>
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function CheckoutVerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <ProtectedRoute>
+          <div className="min-h-screen">
+            <NavBar />
+            <section className="mx-auto w-full max-w-2xl px-6 py-16">
+              <div className="rounded-2xl border border-black/10 bg-white p-8">
+                <h1 className="text-2xl font-semibold">Verifying Payment...</h1>
+                <p className="mt-3 text-sm text-black/60">
+                  Please wait while we confirm your transaction and update your order.
+                </p>
+              </div>
+            </section>
+          </div>
+        </ProtectedRoute>
+      }
+    >
+      <CheckoutVerifyContent />
+    </Suspense>
   );
 }

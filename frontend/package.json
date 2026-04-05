@@ -10,6 +10,8 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "axios": "^1.7.7",
     "framer-motion": "^11.5.4",
     "next": "16.1.6",
