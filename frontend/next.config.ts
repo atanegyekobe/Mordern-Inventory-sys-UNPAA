@@ -31,9 +31,6 @@ if (process.env.NEXT_PUBLIC_ASSET_BASE_URL) {
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
-  turbopack: {
-    root: __dirname,
-  },
   images: {
     remotePatterns: imageRemotePatterns,
   },
