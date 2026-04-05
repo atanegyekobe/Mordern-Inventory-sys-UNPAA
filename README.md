@@ -5,6 +5,7 @@ A full-stack ecommerce platform with customer storefront and admin dashboard bui
 ## 🧭 Operations Docs
 
 - Incident runbook: `OPS_INCIDENT_PLAYBOOK.md`
+- Render backend deployment: `RENDER_BACKEND_DEPLOY.md`
 
 ## ✨ Features
 
