@@ -9,11 +9,11 @@ const resolveApiBaseUrl = () => {
   if (typeof window !== "undefined") {
     const hostname = window.location.hostname;
     const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-    return isLocalhost ? "http://localhost:4000/api" : "/_/backend/api";
+    return isLocalhost ? "http://localhost:4000/api" : "https://ellyshop-backend.onrender.com/api";
   }
 
   return process.env.NODE_ENV === "production"
-    ? "/_/backend/api"
+    ? "https://ellyshop-backend.onrender.com/api"
     : "http://localhost:4000/api";
 };
 
