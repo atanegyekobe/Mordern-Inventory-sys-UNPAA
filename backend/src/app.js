@@ -6,9 +6,25 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
-const routes = require("./routes");
-const { notFound, errorHandler } = require("./middleware/errorHandler");
+const routesModule = require("./routes");
+const errorHandlerModule = require("./middleware/errorHandler");
 const config = require("./config/env");
+
+const resolveMiddleware = (candidate) => {
+  if (typeof candidate === "function") {
+    return candidate;
+  }
+
+  if (candidate && typeof candidate.default === "function") {
+    return candidate.default;
+  }
+
+  return candidate;
+};
+
+const routes = resolveMiddleware(routesModule);
+const notFound = resolveMiddleware(errorHandlerModule.notFound);
+const errorHandler = resolveMiddleware(errorHandlerModule.errorHandler);
 
 const app = express();
 
