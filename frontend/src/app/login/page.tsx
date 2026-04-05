@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import api from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
+import { type AuthResponse, useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/useToast";
 
 type ShopOption = {
@@ -25,13 +25,7 @@ export default function LoginPage() {
   const [selectedShopId, setSelectedShopId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const finishAuth = async (payload: {
-    token: string;
-    user: { role: string };
-    shops?: ShopOption[];
-    activeShopId?: string | null;
-    requiresShopSelection?: boolean;
-  }) => {
+  const finishAuth = async (payload: AuthResponse) => {
     await login(payload);
 
     const hasShops = (payload.shops?.length || 0) > 0;

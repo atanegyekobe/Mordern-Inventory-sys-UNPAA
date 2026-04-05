@@ -3,14 +3,14 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 
-type User = {
+export type User = {
   id: string;
   name: string;
   email: string;
   role: "customer" | "admin";
 };
 
-type ShopSummary = {
+export type ShopSummary = {
   id: string;
   name: string;
   slug: string;
@@ -19,7 +19,7 @@ type ShopSummary = {
   config?: Record<string, unknown>;
 };
 
-type AuthResponse = {
+export type AuthResponse = {
   token: string;
   user: User;
   shops?: ShopSummary[];
