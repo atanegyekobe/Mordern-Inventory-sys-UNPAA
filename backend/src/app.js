@@ -10,21 +10,34 @@ const routesModule = require("./routes");
 const errorHandlerModule = require("./middleware/errorHandler");
 const config = require("./config/env");
 
-const resolveMiddleware = (candidate) => {
-  if (typeof candidate === "function") {
-    return candidate;
+const unwrapModuleFunction = (candidate) => {
+  let current = candidate;
+  let guard = 0;
+
+  while (current && typeof current !== "function" && typeof current === "object" && "default" in current) {
+    current = current.default;
+    guard += 1;
+
+    if (guard > 5) {
+      break;
+    }
   }
 
-  if (candidate && typeof candidate.default === "function") {
-    return candidate.default;
-  }
-
-  return candidate;
+  return current;
 };
 
-const routes = resolveMiddleware(routesModule);
-const notFound = resolveMiddleware(errorHandlerModule.notFound);
-const errorHandler = resolveMiddleware(errorHandlerModule.errorHandler);
+const ensureMiddleware = (candidate, name) => {
+  const resolved = unwrapModuleFunction(candidate);
+  if (typeof resolved !== "function") {
+    const shape = resolved && typeof resolved === "object" ? Object.keys(resolved).join(",") : typeof resolved;
+    throw new TypeError(`${name} must be an Express middleware function. Received: ${shape}`);
+  }
+  return resolved;
+};
+
+const routes = ensureMiddleware(routesModule, "routes");
+const notFound = ensureMiddleware(errorHandlerModule.notFound, "notFound");
+const errorHandler = ensureMiddleware(errorHandlerModule.errorHandler, "errorHandler");
 
 const app = express();
 
