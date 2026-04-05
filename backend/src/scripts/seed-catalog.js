@@ -1,5 +1,5 @@
 require("../config/env");
-const { sequelize, Category, Product } = require("../models");
+const { sequelize, Shop, Category, Product } = require("../models");
 
 const categories = [
   { name: "Essentials", slug: "essentials" },
@@ -74,12 +74,22 @@ const products = [
 const seed = async () => {
   const transaction = await sequelize.transaction();
   try {
+    const targetShopSlug = process.env.SEED_SHOP_SLUG || "main-shop";
+    const shop = await Shop.findOne({
+      where: { slug: targetShopSlug },
+      transaction,
+    });
+
+    if (!shop) {
+      throw new Error(`Shop not found for seeding: ${targetShopSlug}`);
+    }
+
     const categoryMap = new Map();
 
     for (const category of categories) {
       const [record] = await Category.findOrCreate({
-        where: { slug: category.slug },
-        defaults: category,
+        where: { slug: category.slug, ShopId: shop.id },
+        defaults: { ...category, ShopId: shop.id },
         transaction,
       });
       categoryMap.set(category.slug, record);
@@ -92,8 +102,9 @@ const seed = async () => {
       }
 
       await Product.findOrCreate({
-        where: { slug: product.slug },
+        where: { slug: product.slug, ShopId: shop.id },
         defaults: {
+          ShopId: shop.id,
           name: product.name,
           slug: product.slug,
           description: product.description,

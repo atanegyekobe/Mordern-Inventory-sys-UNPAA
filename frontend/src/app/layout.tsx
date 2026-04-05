@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { CartProvider } from "@/lib/cart-context";
+import { AuthProvider } from "@/lib/auth-context";
+import { NotificationProvider } from "@/lib/notification-context";
+import { NotificationProvider as AlertProvider } from "@/lib/notification-alert-context";
+import { Toast } from "@/components/Toast";
+import SupportButton from "@/components/SupportButton";
 
 const display = Playfair_Display({
   variable: "--font-display",
@@ -25,9 +31,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${display.variable} ${body.variable} antialiased`}>
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${display.variable} ${body.variable} antialiased`} suppressHydrationWarning>
+        <AuthProvider>
+          <CartProvider>
+            <NotificationProvider>
+              <AlertProvider>
+                {children}
+                <Toast />
+                <SupportButton />
+              </AlertProvider>
+            </NotificationProvider>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

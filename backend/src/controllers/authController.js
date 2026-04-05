@@ -1,62 +1,36 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const config = require("../config/env");
-const { User } = require("../models");
-
-const signToken = (user) =>
-  jwt.sign({ sub: user.id, role: user.role }, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
-  });
-
-const sanitizeUser = (user) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  role: user.role,
-});
+const { registerUser, loginUser, sanitizeUser } = require("../services/authService");
 
 const register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, type, role, shopName } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-      return res.status(409).json({ message: "Email already in use." });
-    }
+    const payload = await registerUser({ name, email, password, type: type || role, shopName });
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, passwordHash });
-    const token = signToken(user);
-
-    return res.status(201).json({ token, user: sanitizeUser(user) });
+    return res.status(201).json(payload);
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
     return next(error);
   }
 };
 
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, activeShopId } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: "Missing credentials." });
     }
 
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials." });
-    }
-
-    const matches = await bcrypt.compare(password, user.passwordHash);
-    if (!matches) {
-      return res.status(401).json({ message: "Invalid credentials." });
-    }
-
-    const token = signToken(user);
-    return res.json({ token, user: sanitizeUser(user) });
+    const payload = await loginUser({ email, password, activeShopId });
+    return res.json(payload);
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
     return next(error);
   }
 };

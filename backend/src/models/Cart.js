@@ -9,6 +9,14 @@ module.exports = (sequelize) =>
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      ShopId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "shops",
+          key: "id",
+        },
+      },
       status: {
         type: DataTypes.ENUM("open", "converted"),
         allowNull: false,

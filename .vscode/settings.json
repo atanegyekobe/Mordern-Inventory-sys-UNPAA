@@ -10,5 +10,6 @@
             "database": "ecommerce",
             "username": "postgres"
         }
-    ]
+    ],
+    "chat.editor.fontSize": 16
 }

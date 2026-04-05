@@ -12,7 +12,7 @@ export default function AdminPreview() {
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-black/50">
             Admin suite
           </p>
-          <h2 className="mt-3 text-3xl font-semibold">Command the operation.</h2>
+          <h2 className="mt-3 text-3xl font-semibold">Track your business.</h2>
         </div>
         <p className="max-w-md text-sm text-black/60">
           Track inventory, approve orders, and monitor revenue in a single

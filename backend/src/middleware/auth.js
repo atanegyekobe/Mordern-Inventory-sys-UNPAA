@@ -26,6 +26,10 @@ module.exports = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid auth token." });
     }
 
+    user.activeShopId = decoded.activeShopId || null;
+    req.auth = {
+      activeShopId: decoded.activeShopId || null,
+    };
     req.user = user;
     return next();
   } catch (error) {

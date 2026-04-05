@@ -8,6 +8,8 @@ import ProductCard from "@/components/ProductCard";
 import api from "@/lib/api";
 import { accentForCategory, formatCurrency } from "@/lib/format";
 import type { Product } from "@/lib/types";
+import { useCart } from "@/lib/cart-context";
+import { useToast } from "@/hooks/useToast";
 
 const highlights = [
   {
@@ -25,17 +27,30 @@ const highlights = [
 ];
 
 export default function Home() {
+  const { refreshCart } = useCart();
+  const toast = useToast();
   const [featured, setFeatured] = useState<Product[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading"
   );
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await api.post("/cart/items", { productId, quantity: 1 });
+      await refreshCart();
+      toast.success("Added to cart!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add to cart. Please sign in.");
+    }
+  };
 
   useEffect(() => {
     let isActive = true;
 
     const load = async () => {
       try {
-        const response = await api.get("/products");
+        const response = await api.get("/products/public");
         if (isActive) {
           setFeatured((response.data.products ?? []).slice(0, 3));
           setStatus("ready");
@@ -55,11 +70,11 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-linear-to-b from-rose-50 via-amber-50/40 to-cyan-50/60">
       <NavBar />
       <Hero />
       <section className="mx-auto w-full max-w-6xl px-6 py-16">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-4 rounded-3xl border border-rose-100 bg-white/80 p-6 shadow-sm md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-black/50">
               Featured
@@ -78,10 +93,15 @@ export default function Home() {
             featured.map((item) => (
               <ProductCard
                 key={item.id}
+                id={item.id}
+                slug={item.slug}
                 name={item.name}
                 price={formatCurrency(item.price)}
-                tag={item.Category?.name ?? "Collection"}
-                accent={accentForCategory(item.Category?.slug)}
+                tag={item.Category?.Parent?.name || item.Category?.name || "Collection"}
+                accent={accentForCategory(item.Category?.Parent?.slug || item.Category?.slug)}
+                imageUrl={item.imageUrl}
+                stock={item.stock}
+                onAddToCart={handleAddToCart}
               />
             ))
           ) : (
@@ -98,7 +118,7 @@ export default function Home() {
           {highlights.map((item) => (
             <div
               key={item.title}
-              className="glass-panel rounded-3xl p-6 text-left"
+              className="rounded-3xl border border-black/10 bg-linear-to-br from-white to-rose-50/70 p-6 text-left shadow-sm"
             >
               <h3 className="text-xl font-semibold">{item.title}</h3>
               <p className="mt-3 text-sm text-black/60">{item.copy}</p>
