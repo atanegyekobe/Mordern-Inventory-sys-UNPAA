@@ -8,7 +8,9 @@ import api from "@/lib/api";
 type Summary = {
   users: number;
   products: number;
-  orders: number;
+  categories: number;
+  lowStock: number;
+  outOfStock: number;
 };
 
 type StatCard = {
@@ -38,51 +40,57 @@ export default function AdminOverviewPage() {
   const stats: StatCard[] = summary
     ? [
         {
-          label: "Users",
-          value: summary.users,
-          tone: "from-amber-100 to-amber-50 border-amber-200/80",
-          detail: "Registered accounts",
-        },
-        {
-          label: "Products",
+          label: "Catalog Items",
           value: summary.products,
-          tone: "from-cyan-100 to-cyan-50 border-cyan-200/80",
-          detail: "Live catalog entries",
+          tone: "from-amber-100 to-amber-50 border-amber-200/80",
+          detail: "Active products in inventory",
         },
         {
-          label: "Orders",
-          value: summary.orders,
+          label: "Categories",
+          value: summary.categories,
+          tone: "from-cyan-100 to-cyan-50 border-cyan-200/80",
+          detail: "Organized inventory groups",
+        },
+        {
+          label: "Low Stock",
+          value: summary.lowStock,
           tone: "from-emerald-100 to-emerald-50 border-emerald-200/80",
-          detail: "Total processed orders",
+          detail: "Items at reorder threshold",
+        },
+        {
+          label: "Out of Stock",
+          value: summary.outOfStock,
+          tone: "from-rose-100 to-rose-50 border-rose-200/80",
+          detail: "Items unavailable for sale",
         },
       ]
     : [];
 
   const quickActions = [
     {
+      label: "Manage products",
+      description: "Edit stock, pricing, and product status.",
+      href: "/admin/products",
+    },
+    {
+      label: "Update categories",
+      description: "Keep inventory grouped and searchable.",
+      href: "/admin/categories",
+    },
+    {
+      label: "Bulk import",
+      description: "Load inventory updates from CSV.",
+      href: "/admin/import",
+    },
+    {
       label: "Open POS",
-      description: "Launch fast-sale mode for the counter.",
+      description: "Process in-store stock movements quickly.",
       href: "/admin/pos",
     },
     {
-      label: "Review payments",
-      description: "Handle rechecks, refunds, and overrides.",
-      href: "/admin/payments",
-    },
-    {
-      label: "Manage orders",
-      description: "Track fulfillment and customer delivery states.",
-      href: "/admin/orders",
-    },
-    {
-      label: "Open analytics",
-      description: "Inspect revenue, trends, and category performance.",
-      href: "/admin/analytics",
-    },
-    {
-      label: "Read messages",
-      description: "Respond to customer support conversations.",
-      href: "/admin/messages",
+      label: "Sales and movement",
+      description: "Review transaction flow and inventory turnover.",
+      href: "/admin/sales",
     },
   ];
 
@@ -97,14 +105,14 @@ export default function AdminOverviewPage() {
             Command Center
           </p>
           <h2 className="mt-2 text-3xl font-semibold leading-tight text-black">
-            Operational snapshot for today
+            Inventory command center
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-black/65">
-            Monitor your store health at a glance, then jump directly into high-impact workflows.
+            Track stock health in real time and jump straight into the workflows that keep shelves available.
           </p>
         </div>
 
-        <div className="relative mt-6 grid gap-5 md:grid-cols-3">
+        <div className="relative mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {summary ? (
             stats.map((stat) => (
               <div
@@ -151,12 +159,12 @@ export default function AdminOverviewPage() {
 
         <div className="lg:col-span-2">
           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-black/55">
-            Data Sync Notes
+            Inventory Notes
           </h3>
           <div className="mt-3 rounded-2xl border border-dashed border-black/20 bg-black/2 p-5 text-sm text-black/65">
-            Sync your live catalog and recent orders from the API once backend data is populated.
+            Use low-stock and out-of-stock indicators to prioritize replenishment, then validate category structure weekly.
             <p className="mt-3 text-xs text-black/55">
-              Tip: review Payments and Orders first after each deployment to catch reconciliation drift early.
+              Tip: start each day in products, then use sales to verify fast-moving SKUs.
             </p>
           </div>
         </div>

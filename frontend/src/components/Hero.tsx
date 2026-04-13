@@ -5,19 +5,11 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Scene from "./Scene";
 
-const HERO_VIDEO_PLAYLIST = process.env.NEXT_PUBLIC_HERO_VIDEO_PLAYLIST
-  ? process.env.NEXT_PUBLIC_HERO_VIDEO_PLAYLIST.split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean)
-  : [];
-
-const HERO_VIDEOS =
-  HERO_VIDEO_PLAYLIST.length > 0
-    ? HERO_VIDEO_PLAYLIST
-    : [
-        process.env.NEXT_PUBLIC_HERO_VIDEO_URL || "/media/hero-visual.mp4",
-        "/media/hero-visual-2.mp4","/media/hero-visual-3.mp4",
-      ];
+const HERO_VIDEOS = [
+  "/media/hero-visual.mp4",
+  "/media/hero-visual-2.mp4",
+  "/media/hero-visual-3.mp4",
+];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },

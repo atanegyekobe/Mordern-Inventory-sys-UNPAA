@@ -8,8 +8,6 @@
     "start": "node src/server.js",
     "test": "jest --runInBand",
     "db:migrate": "node src/scripts/migrate.js",
-    "db:add-order-statuses": "node src/scripts/add-order-statuses.js",
-    "db:add-financial-constraints": "node src/scripts/add-financial-constraints.js",
     "db:seed-admin": "node src/scripts/seed-admin.js",
     "db:seed-catalog": "node src/scripts/seed-catalog.js"
   },

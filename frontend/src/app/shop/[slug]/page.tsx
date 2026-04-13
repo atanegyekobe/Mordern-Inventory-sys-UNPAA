@@ -9,23 +9,19 @@ import VariantPickerCustomer from "@/components/VariantPickerCustomer";
 import api from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { toAssetUrl } from "@/lib/assets";
-import { useCart } from "@/lib/cart-context";
-import { useToast } from "@/hooks/useToast";
 import type { Product, ProductVariant } from "@/lib/types";
 
 export default function ProductDetailPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
-  const { refreshCart } = useCart();
-  const toast = useToast();
+  const canUseCart = false;
   
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [addingToCart, setAddingToCart] = useState(false);
 
   const categoryPath = product?.Category
     ? product.Category.Parent
@@ -56,30 +52,7 @@ export default function ProductDetailPage() {
   }, [slug]);
 
   const handleAddToCart = async () => {
-    if (!product) return;
-
-    setAddingToCart(true);
-    try {
-      if (selectedVariant) {
-        await api.post("/cart/items", {
-          productId: product.id,
-          variantId: selectedVariant.id,
-          quantity,
-        });
-      } else {
-        await api.post("/cart/items", {
-          productId: product.id,
-          quantity,
-        });
-      }
-      await refreshCart();
-      toast.success(`Added ${quantity} ${product.name} to cart!`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to add to cart";
-      toast.error(message);
-    } finally {
-      setAddingToCart(false);
-    }
+    return;
   };
 
   // Use variant stock if selected, otherwise product stock
@@ -298,13 +271,14 @@ export default function ProductDetailPage() {
                 <button
                   onClick={handleAddToCart}
                   disabled={
+                    !canUseCart ||
                     isOutOfStock ||
-                    addingToCart ||
                     (product.ProductVariants &&
                       product.ProductVariants.length > 0 &&
                       !selectedVariant)
                   }
                   className={`flex-1 rounded-full px-8 py-4 text-base font-semibold transition ${
+                    !canUseCart ||
                     isOutOfStock ||
                     (product.ProductVariants &&
                       product.ProductVariants.length > 0 &&
@@ -313,8 +287,8 @@ export default function ProductDetailPage() {
                       : "bg-linear-to-r from-rose-500 to-orange-500 text-white hover:from-rose-600 hover:to-orange-600"
                   }`}
                 >
-                  {addingToCart
-                    ? "Adding..."
+                  {!canUseCart
+                    ? "Ordering Disabled"
                     : isOutOfStock
                       ? "Out of Stock"
                       : product.ProductVariants &&

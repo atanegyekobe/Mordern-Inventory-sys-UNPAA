@@ -1,7 +1,6 @@
 const app = require("./app");
 const { sequelize } = require("./models");
 const config = require("./config/env");
-const { startScheduler } = require("./controllers/slaJobController");
 
 const startServer = async () => {
   try {
@@ -16,9 +15,6 @@ const startServer = async () => {
     app.listen(config.port, () => {
       // eslint-disable-next-line no-console
       console.log(`API running on port ${config.port}`);
-
-      // Start SLA automation scheduler
-      startScheduler();
     });
   } catch (error) {
     // eslint-disable-next-line no-console

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from "@/lib/cart-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { NotificationProvider } from "@/lib/notification-context";
 import { NotificationProvider as AlertProvider } from "@/lib/notification-alert-context";
@@ -34,15 +33,13 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${display.variable} ${body.variable} antialiased`} suppressHydrationWarning>
         <AuthProvider>
-          <CartProvider>
-            <NotificationProvider>
-              <AlertProvider>
-                {children}
-                <Toast />
-                <SupportButton />
-              </AlertProvider>
-            </NotificationProvider>
-          </CartProvider>
+          <NotificationProvider>
+            <AlertProvider>
+              {children}
+              <Toast />
+              <SupportButton />
+            </AlertProvider>
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

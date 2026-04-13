@@ -7,14 +7,10 @@ import PaginationControls from "@/components/PaginationControls";
 import api from "@/lib/api";
 import { accentForCategory, formatCurrency } from "@/lib/format";
 import type { Product, Category } from "@/lib/types";
-import { useCart } from "@/lib/cart-context";
-import { useToast } from "@/hooks/useToast";
 
 const PAGE_SIZE = 10;
 
 export default function ShopPage() {
-  const { refreshCart } = useCart();
-  const toast = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -23,17 +19,6 @@ export default function ShopPage() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading"
   );
-
-  const handleAddToCart = async (productId: string) => {
-    try {
-      await api.post("/cart/items", { productId, quantity: 1 });
-      await refreshCart();
-      toast.success("Added to cart!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to add to cart. Please sign in.");
-    }
-  };
 
   useEffect(() => {
     let isActive = true;
@@ -188,7 +173,6 @@ export default function ShopPage() {
                       accent={accentForCategory(product.Category?.Parent?.slug || product.Category?.slug)}
                       imageUrl={product.imageUrl}
                       stock={product.stock}
-                      onAddToCart={handleAddToCart}
                     />
                   ))
                 : (

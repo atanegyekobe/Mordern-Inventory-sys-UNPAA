@@ -387,20 +387,6 @@ const remove = async (req, res, next) => {
       return;
     }
 
-    // Check if product has any order history
-    const { OrderItem } = require("../models");
-    const orderCount = await OrderItem.count({
-      where: { ProductId: product.id, ShopId: req.shopId },
-    });
-
-    if (orderCount > 0) {
-      return res.status(409).json({
-        message: `Cannot delete product with order history (${orderCount} order(s) found). Please archive it instead by setting status to 'draft'.`,
-        orderCount,
-        suggestion: "Use PATCH to set status: 'draft' to hide from shop while preserving order history.",
-      });
-    }
-
     await product.destroy();
     return res.status(204).send();
   } catch (error) {
@@ -621,28 +607,6 @@ const bulkDelete = async (req, res, next) => {
     const products = await ensureAllProductsExist(productIds, req.shopId);
     if (!products) {
       return res.status(404).json({ message: "One or more products were not found." });
-    }
-
-    // Check which products have order history
-    const { OrderItem } = require("../models");
-    const productsWithOrders = await OrderItem.findAll({
-      attributes: ["ProductId"],
-      where: { ProductId: productIds, ShopId: req.shopId },
-      raw: true,
-    });
-
-    const productsWithOrderIds = new Set(productsWithOrders.map(oi => oi.ProductId));
-    const canDelete = productIds.filter(id => !productsWithOrderIds.has(id));
-    const cannotDelete = Array.from(productsWithOrderIds);
-
-    if (cannotDelete.length > 0) {
-      return res.status(409).json({
-        message: `${cannotDelete.length} product(s) have order history and cannot be deleted.`,
-        cannotDeleteCount: cannotDelete.length,
-        canDeleteCount: canDelete.length,
-        suggestion: "Archive products with orders by setting status to 'draft' instead.",
-        canDeleteIds: canDelete,
-      });
     }
 
     const deleted = await Product.destroy({

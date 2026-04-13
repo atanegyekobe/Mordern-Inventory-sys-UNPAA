@@ -21,6 +21,7 @@ const toNumericPrice = (value: string) => Number(value.replace(/[^\d.-]/g, ""));
 
 export default function ProductCard({ id, slug, name, price, compareAtPrice, tag, accent, imageUrl, stock = 0, onAddToCart }: ProductCardProps) {
   const isOutOfStock = stock <= 0;
+  const isOrderingDisabled = !onAddToCart;
   const currentPrice = toNumericPrice(price);
   const originalPrice = compareAtPrice ? toNumericPrice(compareAtPrice) : null;
   const hasPriceChange =
@@ -37,7 +38,7 @@ export default function ProductCard({ id, slug, name, price, compareAtPrice, tag
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isOutOfStock && onAddToCart) {
+    if (!isOutOfStock && !isOrderingDisabled && onAddToCart) {
       onAddToCart(id);
     }
   };
@@ -91,14 +92,14 @@ export default function ProductCard({ id, slug, name, price, compareAtPrice, tag
           <div className="mt-auto flex flex-col gap-2">
             <button 
               onClick={handleAddToCart}
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || isOrderingDisabled}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                isOutOfStock
+                isOutOfStock || isOrderingDisabled
                   ? "border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
                   : "border-rose-200 bg-linear-to-r from-rose-500 to-orange-500 text-white hover:from-rose-600 hover:to-orange-600"
               }`}
             >
-              {isOutOfStock ? "Out of Stock" : "Add to cart"}
+              {isOutOfStock ? "Out of Stock" : isOrderingDisabled ? "Ordering Disabled" : "Add to cart"}
             </button>
             <span className="text-center text-xs text-black/50">or click to view details</span>
           </div>

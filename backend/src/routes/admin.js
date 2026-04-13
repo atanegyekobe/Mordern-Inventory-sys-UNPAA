@@ -3,12 +3,11 @@ const auth = require("../middleware/auth");
 const { resolveShopContext } = require("../middleware/shopContext");
 const requireShopAdminAccess = require("../middleware/requireShopAdminAccess");
 const { uploadCsv } = require("../config/multer");
-const { summary, analytics, salesManagement, getLowStockAlerts, reconciliationReport } = require("../controllers/adminController");
+const { summary, analytics, salesManagement, getLowStockAlerts } = require("../controllers/adminController");
 const { previewImport, executeImport } = require("../controllers/importController");
 
 const router = express.Router();
 
-router.get("/reconciliation/report", auth, resolveShopContext, requireShopAdminAccess, reconciliationReport);
 router.get("/summary", auth, resolveShopContext, requireShopAdminAccess, summary);
 router.get("/analytics", auth, resolveShopContext, requireShopAdminAccess, analytics);
 router.get("/sales-management", auth, resolveShopContext, requireShopAdminAccess, salesManagement);

@@ -80,12 +80,6 @@ export default function ProfilePage() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              href="/account/orders"
-              className="rounded-full border border-black/10 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:border-black/30"
-            >
-              View orders
-            </Link>
-            <Link
               href="/account/support"
               className="rounded-full border border-black/10 bg-white px-5 py-2 text-sm font-semibold text-black transition hover:border-black/30"
             >

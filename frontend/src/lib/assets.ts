@@ -1,10 +1,8 @@
-const fallbackApi = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "") ||
+  "http://localhost:4000";
 
-// If API base ends with /api, drop it for asset host fallback
-const deriveAssetBase = (apiBase: string) => apiBase.replace(/\/api\/?$/, "");
-
-export const assetBaseUrl =
-  process.env.NEXT_PUBLIC_ASSET_BASE_URL || deriveAssetBase(fallbackApi);
+export const assetBaseUrl = BASE_URL;
 
 export const toAssetUrl = (path?: string | null) => {
   if (!path) return "";

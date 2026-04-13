@@ -282,9 +282,9 @@ export default function PosPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-black/45">
                 Quick sale mode
               </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+              <h3 className="mt-2 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
                 Fast in-store selling without checkout friction.
-              </h2>
+              </h3>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-black/65">
                 Search products, build a cart, and complete a sale in one flow. Inventory is decremented through the existing backend sale transaction.
               </p>

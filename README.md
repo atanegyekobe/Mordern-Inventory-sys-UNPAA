@@ -512,16 +512,19 @@ npm run lint         # Run ESLint
    npm start
    ```
 
-### Frontend Deployment (Vercel/Netlify)
+### Frontend Deployment
 1. Set environment variable:
-   - `NEXT_PUBLIC_API_BASE_URL` (production API URL)
+  - `NEXT_PUBLIC_API_BASE_URL` (production API URL)
 
-2. Build and deploy:
-   ```bash
-   npm run build
-   ```
+2. Build frontend:
+  ```bash
+  npm run build
+  ```
 
-3. Platform will automatically deploy the `.next` build
+3. Start frontend in production mode:
+  ```bash
+  npm run start
+  ```
 
 ## 🐛 Troubleshooting
 

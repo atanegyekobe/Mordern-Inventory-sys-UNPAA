@@ -2,9 +2,6 @@ const { Op } = require("sequelize");
 const {
   sequelize,
   Product,
-  Order,
-  OrderItem,
-  OrderStatusEvent,
   OfflineSale,
   OfflineSaleItem,
 } = require("../models");
@@ -131,61 +128,6 @@ const createPosSale = async ({ shopId, userId, items }) => {
       });
     }
 
-    const order = await Order.create(
-      {
-        UserId: userId,
-        ShopId: shopId,
-        status: "fulfilled",
-        total: minorToMajor(totalAmount),
-        totalMinor: totalAmount,
-        totalPaid: totalAmount,
-        balanceDue: 0,
-        metadata: {
-          source: "POS",
-          payment: {
-            status: "paid",
-            verificationSource: "offline_override",
-          },
-          pos: {
-            payment_status: "PAID",
-            order_status: "COMPLETED",
-          },
-        },
-      },
-      { transaction }
-    );
-
-    await OrderStatusEvent.create(
-      {
-        OrderId: order.id,
-        fromStatus: null,
-        toStatus: "fulfilled",
-        actorRole: "admin",
-        actorUserId: userId,
-        note: "Order created from POS quick sale.",
-        metadata: {
-          source: "POS",
-          payment_status: "PAID",
-          order_status: "COMPLETED",
-        },
-      },
-      { transaction }
-    );
-
-    await OrderItem.bulkCreate(
-      saleLines.map((line) => ({
-        OrderId: order.id,
-        ProductId: line.productId,
-        ShopId: shopId,
-        quantity: line.quantity,
-        unitPrice: minorToMajor(line.priceAtSale),
-        unitPriceMinor: line.priceAtSale,
-        priceAtPurchase: line.priceAtSale,
-        costAtPurchase: line.costAtPurchase,
-      })),
-      { transaction }
-    );
-
     const sale = await OfflineSale.create(
       {
         ShopId: shopId,
@@ -229,26 +171,16 @@ const createPosSale = async ({ shopId, userId, items }) => {
       }
     }
 
-    const mergedMetadata = {
-      ...(order.metadata || {}),
-      pos: {
-        ...((order.metadata && order.metadata.pos) || {}),
-        offlineSaleId: sale.id,
-      },
-    };
-
-    await order.update({ metadata: mergedMetadata }, { transaction });
-
     return {
       order: {
-        id: order.id,
-        status: order.status,
-        totalMinor: order.totalMinor,
-        total: order.total,
+        id: sale.id,
+        status: "completed",
+        totalMinor: sale.totalAmount,
+        total: minorToMajor(sale.totalAmount),
         source: "POS",
         payment_status: "PAID",
         order_status: "COMPLETED",
-        createdAt: order.createdAt,
+        createdAt: sale.createdAt,
       },
       sale: {
         id: sale.id,

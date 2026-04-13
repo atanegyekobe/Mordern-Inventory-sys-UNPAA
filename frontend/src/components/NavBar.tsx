@@ -3,21 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/useToast";
 import { useNotifications } from "@/lib/notification-alert-context";
 import NotificationBadge from "@/components/NotificationBadge";
 import NotificationBell from "@/components/NotificationBell";
-import OrderNotificationMenu from "@/components/OrderNotificationMenu";
 
 export default function NavBar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { cartCount } = useCart();
   const { user, shops, logout } = useAuth();
   const toast = useToast();
-  const { unreadMessages, unreadOrderNotifications } = useNotifications();
+  const { unreadMessages } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const firstName = user?.name?.split(" ")[0] ?? "Guest";
@@ -66,10 +63,6 @@ export default function NavBar() {
               {user && (
                 <>
                   <Link href="/account/profile" className={navLinkClass("/account/profile")}>Profile</Link>
-                  <Link href="/account/orders" className={navLinkClass("/account/orders")}>
-                    Orders
-                    <NotificationBadge count={unreadOrderNotifications} size="sm" />
-                  </Link>
                   <Link href="/account/support" className={navLinkClass("/account/support")}>
                     Messages
                     <NotificationBadge count={unreadMessages} size="sm" />
@@ -85,35 +78,9 @@ export default function NavBar() {
             <div className="ml-auto flex items-center gap-2">
               {user && (
                 <>
-                  <OrderNotificationMenu />
                   <NotificationBell />
                 </>
               )}
-
-              <Link
-                href="/cart"
-                className="relative rounded-full border border-rose-100 bg-white p-2.5 text-black/70 transition hover:border-rose-300 hover:text-black"
-                title="Cart"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-                {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-linear-to-r from-rose-500 to-orange-500 text-xs font-semibold text-white">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
 
               {user ? (
                 <>
@@ -176,7 +143,6 @@ export default function NavBar() {
                 {user && (
                   <>
                     <Link href="/account/profile" className={navLinkClass("/account/profile")} onClick={() => setIsMobileMenuOpen(false)}>Profile</Link>
-                    <Link href="/account/orders" className={navLinkClass("/account/orders")} onClick={() => setIsMobileMenuOpen(false)}>Orders</Link>
                     <Link href="/account/support" className={navLinkClass("/account/support")} onClick={() => setIsMobileMenuOpen(false)}>Messages</Link>
                   </>
                 )}

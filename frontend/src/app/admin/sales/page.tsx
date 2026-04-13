@@ -292,7 +292,7 @@ export default function SalesManagementPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `sales-order-profitability-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `inventory-movement-profitability-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -300,15 +300,15 @@ export default function SalesManagementPage() {
   };
 
   return (
-    <AdminShell title="Sales Management">
+    <AdminShell title="Stock Movements">
       <div className="space-y-6">
         <section className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-900">Data Sync Notes</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-900">Movement Notes</h2>
           <p className="mt-2 text-sm text-sky-900/90">
-            Sync your live catalog and recent orders from the API once backend data is populated.
+            Track stock inflow and outflow using product-level profitability and unit movement.
           </p>
           <p className="mt-1 text-sm text-sky-900/90">
-            Tip: review Payments and Orders first after each deployment to catch reconciliation drift early.
+            Tip: start with critical and low stock items, then verify margin trends by category.
           </p>
         </section>
 
@@ -430,7 +430,7 @@ export default function SalesManagementPage() {
 
         {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-        {loading && <div className="rounded-xl border border-black/10 bg-white p-4 text-sm text-black/60">Loading sales management...</div>}
+        {loading && <div className="rounded-xl border border-black/10 bg-white p-4 text-sm text-black/60">Loading stock movement data...</div>}
 
         {!loading && data && (
           <>
@@ -456,7 +456,7 @@ export default function SalesManagementPage() {
                       : "border border-black/10 bg-white text-black hover:bg-black/5"
                   }`}
                 >
-                  Sales History & Smart Analysis
+                  Movement History & Smart Analysis
                 </button>
               </div>
             </section>
@@ -559,7 +559,7 @@ export default function SalesManagementPage() {
 
                 <section className="rounded-2xl border border-black/10 bg-white p-4">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-lg font-semibold">Sales History Table</h2>
+                    <h2 className="text-lg font-semibold">Movement History Table</h2>
                     <button
                       type="button"
                       onClick={exportOrderRowsCsv}

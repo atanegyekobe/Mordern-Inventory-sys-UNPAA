@@ -12,18 +12,13 @@ type AdminShellProps = {
 
 const links = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/sales", label: "Sales Management" },
+  { href: "/admin/analytics", label: "Inventory Insights" },
+  { href: "/admin/sales", label: "Stock Movements" },
   { href: "/admin/pos", label: "POS" },
-  { href: "/admin/products", label: "Products" },
-  { href: "/admin/import", label: "CSV Import" },
+  { href: "/admin/products", label: "Inventory" },
+  { href: "/admin/import", label: "Import" },
   { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/payments", label: "Payments" },
-  { href: "/admin/sla", label: "SLA & Automation" },
-  { href: "/admin/observability", label: "Observability" },
   { href: "/admin/customers", label: "Customers" },
-  { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/messages", label: "Messages" },
 ];
 
@@ -67,7 +62,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
               <div className="sticky top-24 overflow-hidden rounded-3xl border border-black/10 bg-white/85 p-4 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.55)] backdrop-blur">
                 <div className="mb-4 rounded-2xl border border-black/10 bg-[linear-gradient(135deg,#111827_0%,#1f2937_55%,#0f172a_100%)] p-4 text-white">
                   <p className="text-[10px] uppercase tracking-[0.22em] text-white/70">
-                    Admin Workspace
+                    Inventory Workspace
                   </p>
                   <p className="mt-2 text-lg font-semibold leading-tight">
                     {title}

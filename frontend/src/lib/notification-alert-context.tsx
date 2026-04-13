@@ -5,48 +5,34 @@ import api from "@/lib/api";
 
 interface NotificationContextValue {
   unreadMessages: number;
-  unreadOrderNotifications: number;
   refreshNotifications: () => Promise<void>;
   markMessageAsRead: (messageId: string) => Promise<void>;
-  markOrderNotificationAsRead: (notificationId: string) => Promise<void>;
-  markAllOrderNotificationsAsRead: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextValue>({
   unreadMessages: 0,
-  unreadOrderNotifications: 0,
   refreshNotifications: async () => {},
   markMessageAsRead: async () => {},
-  markOrderNotificationAsRead: async () => {},
-  markAllOrderNotificationsAsRead: async () => {},
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [unreadOrderNotifications, setUnreadOrderNotifications] = useState(0);
 
   const refreshNotifications = useCallback(async () => {
     try {
       const token = window.localStorage.getItem("ellora_token");
       if (!token) {
         setUnreadMessages(0);
-        setUnreadOrderNotifications(0);
         return;
       }
 
-      const [messageResponse, orderResponse] = await Promise.all([
-        api.get("/messages/unread/count"),
-        api.get("/order-notifications/unread/count"),
-      ]);
+      const messageResponse = await api.get("/messages/unread/count");
 
       const messageCount = messageResponse.data?.count || 0;
-      const orderCount = orderResponse.data?.count || 0;
 
       setUnreadMessages(messageCount);
-      setUnreadOrderNotifications(orderCount);
     } catch {
       setUnreadMessages(0);
-      setUnreadOrderNotifications(0);
     }
   }, []);
 
@@ -57,24 +43,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       await refreshNotifications();
     } catch (error) {
       console.error("Failed to mark message as read:", error);
-    }
-  }, [refreshNotifications]);
-
-  const markOrderNotificationAsRead = useCallback(async (notificationId: string) => {
-    try {
-      await api.post(`/order-notifications/${notificationId}/read`);
-      await refreshNotifications();
-    } catch (error) {
-      console.error("Failed to mark order notification as read:", error);
-    }
-  }, [refreshNotifications]);
-
-  const markAllOrderNotificationsAsRead = useCallback(async () => {
-    try {
-      await api.post("/order-notifications/read-all");
-      await refreshNotifications();
-    } catch (error) {
-      console.error("Failed to mark order notifications as read:", error);
     }
   }, [refreshNotifications]);
 
@@ -113,11 +81,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider
       value={{
         unreadMessages,
-        unreadOrderNotifications,
         refreshNotifications,
         markMessageAsRead,
-        markOrderNotificationAsRead,
-        markAllOrderNotificationsAsRead,
       }}
     >
       {children}

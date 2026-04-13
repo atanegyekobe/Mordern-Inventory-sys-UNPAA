@@ -8,8 +8,6 @@ import ProductCard from "@/components/ProductCard";
 import api from "@/lib/api";
 import { accentForCategory, formatCurrency } from "@/lib/format";
 import type { Product } from "@/lib/types";
-import { useCart } from "@/lib/cart-context";
-import { useToast } from "@/hooks/useToast";
 
 const highlights = [
   {
@@ -27,23 +25,10 @@ const highlights = [
 ];
 
 export default function Home() {
-  const { refreshCart } = useCart();
-  const toast = useToast();
   const [featured, setFeatured] = useState<Product[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading"
   );
-
-  const handleAddToCart = async (productId: string) => {
-    try {
-      await api.post("/cart/items", { productId, quantity: 1 });
-      await refreshCart();
-      toast.success("Added to cart!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to add to cart. Please sign in.");
-    }
-  };
 
   useEffect(() => {
     let isActive = true;
@@ -101,7 +86,6 @@ export default function Home() {
                 accent={accentForCategory(item.Category?.Parent?.slug || item.Category?.slug)}
                 imageUrl={item.imageUrl}
                 stock={item.stock}
-                onAddToCart={handleAddToCart}
               />
             ))
           ) : (

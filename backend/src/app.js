@@ -8,7 +8,6 @@ const rateLimit = require("express-rate-limit");
 const path = require("path");
 const routesModule = require("./routes/index.js");
 const errorHandlerModule = require("./middleware/errorHandler");
-const config = require("./config/env");
 
 const isExpressMiddleware = (candidate) => typeof candidate === "function";
 
@@ -60,7 +59,7 @@ const app = express();
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-app.use(cors({ origin: config.clientOrigin, credentials: true }));
+app.use(cors({ origin: "*" }));
 app.use(
   express.json({
     limit: "1mb",
