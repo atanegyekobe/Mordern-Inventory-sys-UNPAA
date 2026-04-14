@@ -8,6 +8,8 @@
   --forest: #1c4437;
   --sky: #cfe4ff;
   --stone: #8d8a83;
+  --font-display: "Segoe UI", "Trebuchet MS", "Helvetica Neue", sans-serif;
+  --font-body: "Segoe UI", "Inter", "Helvetica Neue", sans-serif;
 }
 
 @theme inline {

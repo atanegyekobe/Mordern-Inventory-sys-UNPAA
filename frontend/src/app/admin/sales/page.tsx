@@ -150,14 +150,14 @@ export default function SalesManagementPage() {
 
   const historyStatuses = useMemo(() => {
     const statuses = new Set<string>();
-    for (const row of data?.orderProfitability.items ?? []) {
+    for (const row of data?.orderProfitability?.items ?? []) {
       statuses.add(row.order.status || "unknown");
     }
     return Array.from(statuses).sort((a, b) => a.localeCompare(b));
-  }, [data?.orderProfitability.items]);
+  }, [data?.orderProfitability?.items]);
 
   const historyRows = useMemo(() => {
-    const rows = [...(data?.orderProfitability.items ?? [])];
+    const rows = [...(data?.orderProfitability?.items ?? [])];
 
     const matchesMarginBand = (marginPct: number) => {
       if (marginBand === "all") return true;
@@ -213,7 +213,7 @@ export default function SalesManagementPage() {
     });
 
     return filtered;
-  }, [data?.orderProfitability.items, historyStatus, marginBand, stockBand, historyQuery, historySort]);
+  }, [data?.orderProfitability?.items, historyStatus, marginBand, stockBand, historyQuery, historySort]);
 
   const historyInsights = useMemo(() => {
     const rows = historyRows;
@@ -255,7 +255,7 @@ export default function SalesManagementPage() {
   };
 
   const exportOrderRowsCsv = () => {
-    if (!data?.orderProfitability.items?.length) return;
+    if (!data?.orderProfitability?.items?.length) return;
 
     const header = [
       "Order ID",
@@ -272,7 +272,7 @@ export default function SalesManagementPage() {
       "Stock Remaining",
     ];
 
-    const rows = data.orderProfitability.items.map((item) => [
+    const rows = (data?.orderProfitability?.items ?? []).map((item) => [
       item.order.id,
       new Date(item.order.createdAt).toISOString(),
       item.order.status,
@@ -546,12 +546,12 @@ export default function SalesManagementPage() {
                   <div className="rounded-xl border border-black/10 bg-white p-4">
                     <p className="text-xs uppercase tracking-[0.12em] text-black/55">Loss Alerts</p>
                     <p className="mt-2 text-2xl font-semibold text-red-700">{historyInsights.lossesCount}</p>
-                    <p className="mt-1 break-words text-xs text-black/55">Impact {formatCurrency(historyInsights.totalLossImpact)}</p>
+                    <p className="mt-1 wrap-break-word text-xs text-black/55">Impact {formatCurrency(historyInsights.totalLossImpact)}</p>
                   </div>
                   <div className="rounded-xl border border-black/10 bg-white p-4">
                     <p className="text-xs uppercase tracking-[0.12em] text-black/55">Low Stock Signals</p>
                     <p className="mt-2 text-2xl font-semibold text-amber-700">{historyInsights.lowStockCount}</p>
-                    <p className="mt-1 break-words text-xs text-black/55">
+                    <p className="mt-1 wrap-break-word text-xs text-black/55">
                       Best line {historyInsights.bestProfitRow ? formatCurrency(historyInsights.bestProfitRow.profit) : formatCurrency(0)}
                     </p>
                   </div>

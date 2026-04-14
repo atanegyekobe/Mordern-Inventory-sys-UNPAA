@@ -411,7 +411,7 @@ export default function AdminProductsPage() {
 
   return (
     <AdminShell title="Products">
-      <section className="relative overflow-hidden rounded-3xl border border-black/10 bg-[radial-gradient(circle_at_top_left,_#dbeafe_0%,_transparent_42%),radial-gradient(circle_at_top_right,_#fde68a_0%,_transparent_36%),linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-5">
+      <section className="relative overflow-hidden rounded-3xl border border-black/10 bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_42%),radial-gradient(circle_at_top_right,#fde68a_0%,transparent_36%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5">
         <div className="absolute -right-10 -top-8 h-28 w-28 rounded-full bg-cyan-200/35 blur-2xl" />
         <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-amber-200/40 blur-2xl" />
         <div className="relative">
@@ -433,7 +433,7 @@ export default function AdminProductsPage() {
           className={`rounded-t-xl px-4 py-3 text-sm font-semibold transition-colors ${
             viewMode === "active"
               ? "border-b-2 border-black bg-black text-white"
-              : "text-black/60 hover:bg-black/[0.04] hover:text-black"
+              : "text-black/60 hover:bg-black/4 hover:text-black"
           }`}
         >
           Active Products ({products.filter((p) => p.status === "active").length})
@@ -447,7 +447,7 @@ export default function AdminProductsPage() {
           className={`rounded-t-xl px-4 py-3 text-sm font-semibold transition-colors ${
             viewMode === "trash"
               ? "border-b-2 border-black bg-black text-white"
-              : "text-black/60 hover:bg-black/[0.04] hover:text-black"
+              : "text-black/60 hover:bg-black/4 hover:text-black"
           }`}
         >
           Trash ({products.filter((p) => p.status === "draft").length})

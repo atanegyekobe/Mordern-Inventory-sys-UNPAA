@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Product } = require("../models");
+const { Product, Category } = require("../models");
 const { createPosSale, PosSaleError } = require("../services/posSaleService");
 
 const POS_SEARCH_LIMIT = 20;
@@ -11,9 +11,9 @@ const listProducts = async (req, res, next) => {
         ShopId: req.shopId,
         status: "active",
       },
-      attributes: ["id", "name", "price", "stock", "imageUrl"],
+      attributes: ["id", "name", "price", "stock", "imageUrl", "CategoryId"],
+      include: [{ model: Category, attributes: ["id", "name"], required: false }],
       order: [["name", "ASC"]],
-      raw: true,
     });
 
     return res.json({
@@ -23,6 +23,13 @@ const listProducts = async (req, res, next) => {
         price: product.price,
         stock: product.stock,
         image: product.imageUrl,
+        CategoryId: product.CategoryId || null,
+        Category: product.Category
+          ? {
+              id: product.Category.id,
+              name: product.Category.name,
+            }
+          : null,
       })),
     });
   } catch (error) {
@@ -46,10 +53,10 @@ const searchProducts = async (req, res, next) => {
           { sku: { [Op.iLike]: `%${query}%` } },
         ],
       },
-      attributes: ["id", "name", "price", "stock", "imageUrl"],
+      attributes: ["id", "name", "price", "stock", "imageUrl", "CategoryId"],
+      include: [{ model: Category, attributes: ["id", "name"], required: false }],
       order: [["name", "ASC"]],
       limit: POS_SEARCH_LIMIT,
-      raw: true,
     });
 
     return res.json({
@@ -59,6 +66,13 @@ const searchProducts = async (req, res, next) => {
         price: product.price,
         stock: product.stock,
         image: product.imageUrl,
+        CategoryId: product.CategoryId || null,
+        Category: product.Category
+          ? {
+              id: product.Category.id,
+              name: product.Category.name,
+            }
+          : null,
       })),
     });
   } catch (error) {
