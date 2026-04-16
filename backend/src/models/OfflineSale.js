@@ -35,6 +35,10 @@ module.exports = (sequelize) =>
         allowNull: false,
         defaultValue: "COMPLETED",
       },
+      note: {
+        type: DataTypes.STRING(280),
+        allowNull: true,
+      },
     },
     {
       tableName: "offline_sales",

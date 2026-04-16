@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
 import NavBar from "@/components/NavBar";
+import PaginationControls from "@/components/PaginationControls";
 import { AdminRoute } from "@/components/RouteGuards";
 import api from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -28,6 +29,43 @@ type CartLine = PosProduct & {
 };
 
 type CategoryFilter = "all" | string;
+const POS_PAGE_SIZE = 16;
+
+const CARD_PIGMENTS = [
+  {
+    shell: "bg-[linear-gradient(180deg,#fffdf8_0%,#fff8ef_100%)]",
+    strip: "bg-[linear-gradient(90deg,#f59e0b_0%,#f97316_48%,#eab308_100%)]",
+    chip: "bg-amber-100 text-amber-800",
+    glow: "hover:shadow-[0_16px_28px_-20px_rgba(245,158,11,0.65)]",
+  },
+  {
+    shell: "bg-[linear-gradient(180deg,#f7fff9_0%,#ecfdf3_100%)]",
+    strip: "bg-[linear-gradient(90deg,#34d399_0%,#10b981_50%,#22c55e_100%)]",
+    chip: "bg-emerald-100 text-emerald-800",
+    glow: "hover:shadow-[0_16px_28px_-20px_rgba(16,185,129,0.65)]",
+  },
+  {
+    shell: "bg-[linear-gradient(180deg,#f8fbff_0%,#eef6ff_100%)]",
+    strip: "bg-[linear-gradient(90deg,#60a5fa_0%,#3b82f6_50%,#22d3ee_100%)]",
+    chip: "bg-sky-100 text-sky-800",
+    glow: "hover:shadow-[0_16px_28px_-20px_rgba(59,130,246,0.65)]",
+  },
+  {
+    shell: "bg-[linear-gradient(180deg,#fff8fc_0%,#fff1f7_100%)]",
+    strip: "bg-[linear-gradient(90deg,#f472b6_0%,#ec4899_45%,#a855f7_100%)]",
+    chip: "bg-pink-100 text-pink-800",
+    glow: "hover:shadow-[0_16px_28px_-20px_rgba(236,72,153,0.65)]",
+  },
+];
+
+const pigmentFromSeed = (seed: string) => {
+  const value = String(seed || "general").toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return CARD_PIGMENTS[hash % CARD_PIGMENTS.length];
+};
 
 type SaleReceipt = {
   order?: {
@@ -45,6 +83,7 @@ type SaleReceipt = {
     totalAmount: string | number;
     totalAmountMinor: number;
     status: string;
+    note?: string | null;
     createdAt?: string;
   };
   items: Array<{
@@ -58,7 +97,56 @@ type SaleReceipt = {
   }>;
 };
 
+type RecentSale = {
+  id: string;
+  totalAmountMinor: number;
+  totalAmount: string | number;
+  status: string;
+  note?: string | null;
+  createdAt?: string;
+  itemCount: number;
+  cashier?: {
+    id: string;
+    name: string;
+  } | null;
+};
+
+type RecentSaleDetails = {
+  sale: {
+    id: string;
+    totalAmountMinor: number;
+    totalAmount: string | number;
+    status: string;
+    note?: string | null;
+    createdAt?: string;
+    itemCount: number;
+    cashier?: {
+      id: string;
+      name: string;
+    } | null;
+  };
+  items: Array<{
+    id: string;
+    productId: string;
+    productName: string;
+    productImage?: string | null;
+    quantity: number;
+    priceAtSaleMinor: number;
+    priceAtSale: string | number;
+    lineTotalMinor: number;
+    lineTotal: string | number;
+  }>;
+};
+
 const formatMoney = (value: string | number) => formatCurrency(value);
+
+const escapeForHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
 const getErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null) {
@@ -81,7 +169,15 @@ export default function PosPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<PosProduct | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [isMaxViewport, setIsMaxViewport] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
+  const [loadingRecentSales, setLoadingRecentSales] = useState(true);
+  const [selectedRecentSale, setSelectedRecentSale] = useState<RecentSaleDetails | null>(null);
+  const [selectedRecentSaleId, setSelectedRecentSaleId] = useState<string | null>(null);
+  const [loadingSelectedRecentSale, setLoadingSelectedRecentSale] = useState(false);
+  const [selectedRecentSaleError, setSelectedRecentSaleError] = useState<string | null>(null);
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [transactionNote, setTransactionNote] = useState("");
 
   const loadProducts = async (search = "") => {
     try {
@@ -99,6 +195,40 @@ export default function PosPage() {
     } finally {
       setLoadingProducts(false);
     }
+  };
+
+  const loadRecentSales = async () => {
+    try {
+      setLoadingRecentSales(true);
+      const response = await api.get("/pos/recent-sales");
+      setRecentSales((response.data.sales ?? []) as RecentSale[]);
+    } catch {
+      setRecentSales([]);
+    } finally {
+      setLoadingRecentSales(false);
+    }
+  };
+
+  const openSaleDetails = async (saleId: string) => {
+    try {
+      setSelectedRecentSaleId(saleId);
+      setLoadingSelectedRecentSale(true);
+      setSelectedRecentSaleError(null);
+      const response = await api.get(`/pos/recent-sales/${saleId}`);
+      setSelectedRecentSale(response.data as RecentSaleDetails);
+    } catch (detailsError) {
+      setSelectedRecentSale(null);
+      setSelectedRecentSaleError(getErrorMessage(detailsError));
+    } finally {
+      setLoadingSelectedRecentSale(false);
+    }
+  };
+
+  const closeSaleDetails = () => {
+    setSelectedRecentSaleId(null);
+    setSelectedRecentSale(null);
+    setSelectedRecentSaleError(null);
+    setLoadingSelectedRecentSale(false);
   };
 
   useEffect(() => {
@@ -136,13 +266,7 @@ export default function PosPage() {
   }, [deferredQuery]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMaxViewport(window.innerWidth >= 1280);
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    void loadRecentSales();
   }, []);
 
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
@@ -176,6 +300,17 @@ export default function PosPage() {
     sorted.sort((a, b) => a.name.localeCompare(b.name));
     return sorted;
   }, [products, categoryFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [deferredQuery, categoryFilter, products.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / POS_PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedFilteredProducts = filteredProducts.slice(
+    (safePage - 1) * POS_PAGE_SIZE,
+    safePage * POS_PAGE_SIZE
+  );
 
   const addToCart = (product: PosProduct) => {
     if (product.stock <= 0) {
@@ -228,7 +363,18 @@ export default function PosPage() {
     setCart([]);
     setReceipt(null);
     setQuery("");
+    setShowCheckoutConfirm(false);
+    setTransactionNote("");
     void loadProducts("");
+  };
+
+  const openCheckoutConfirm = () => {
+    if (cart.length === 0) {
+      toast.warning("Add at least one item before completing the sale.");
+      return;
+    }
+
+    setShowCheckoutConfirm(true);
   };
 
   const completeSale = async () => {
@@ -238,16 +384,20 @@ export default function PosPage() {
     }
 
     try {
+      setShowCheckoutConfirm(false);
       setSubmitting(true);
       const response = await api.post("/pos/sale", {
         items: cart.map((line) => ({ productId: line.id, quantity: line.quantity })),
+        note: transactionNote.trim() || undefined,
       });
 
       setReceipt(response.data as SaleReceipt);
       setCart([]);
       setQuery("");
+      setTransactionNote("");
       toast.success("Sale completed successfully.");
       await loadProducts("");
+      await loadRecentSales();
     } catch (saleError) {
       toast.error(getErrorMessage(saleError));
     } finally {
@@ -255,13 +405,119 @@ export default function PosPage() {
     }
   };
 
-  const productCards = filteredProducts.map((product) => {
+  const printReceipt = () => {
+    if (!receipt) {
+      return;
+    }
+
+    const printedAt = new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date());
+
+    const createdAt = receipt.sale.createdAt
+      ? new Intl.DateTimeFormat("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(receipt.sale.createdAt))
+      : printedAt;
+
+    const rows = receipt.items
+      .map(
+        (item) => `
+          <tr>
+            <td>${escapeForHtml(item.productName)}</td>
+            <td style="text-align:center;">${item.quantity}</td>
+            <td style="text-align:right;">${escapeForHtml(String(formatMoney(item.priceAtSale)))}</td>
+            <td style="text-align:right; font-weight: 600;">${escapeForHtml(String(formatMoney(item.lineTotal)))}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const printWindow = window.open("", "_blank", "width=860,height=700");
+    if (!printWindow) {
+      toast.error("Unable to open print window. Please allow popups and try again.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>POS Receipt ${escapeForHtml(receipt.sale.id)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+            .muted { color: #6b7280; font-size: 12px; }
+            .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+            .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; }
+            .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #6b7280; }
+            .value { margin-top: 6px; font-weight: 600; }
+            table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+            th, td { border-bottom: 1px solid #e5e7eb; padding: 10px 8px; font-size: 13px; }
+            th { text-align: left; font-size: 12px; color: #4b5563; }
+            .totalRow { margin-top: 14px; display: flex; justify-content: flex-end; gap: 12px; font-size: 16px; font-weight: 700; }
+            @media print { body { margin: 10mm; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h2 style="margin:0;">POS Receipt</h2>
+              <p class="muted" style="margin:4px 0 0 0;">Sale ID: ${escapeForHtml(receipt.sale.id)}</p>
+            </div>
+            <div style="text-align:right;">
+              <p class="muted" style="margin:0;">Sale time: ${escapeForHtml(createdAt)}</p>
+              <p class="muted" style="margin:4px 0 0 0;">Printed: ${escapeForHtml(printedAt)}</p>
+            </div>
+          </div>
+
+          <div class="summary">
+            <div class="card"><div class="label">Status</div><div class="value">${escapeForHtml(receipt.sale.status)}</div></div>
+            <div class="card"><div class="label">Items</div><div class="value">${receipt.items.length}</div></div>
+            <div class="card"><div class="label">Payment</div><div class="value">${escapeForHtml(receipt.order?.payment_status || "PAID")}</div></div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th style="text-align:center;">Qty</th>
+                <th style="text-align:right;">Price</th>
+                <th style="text-align:right;">Line</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+
+          <div class="totalRow">
+            <span>Total:</span>
+            <span>${escapeForHtml(String(formatMoney(receiptTotal)))}</span>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const productCards = paginatedFilteredProducts.map((product) => {
     const inCart = cartLookup.get(product.id);
+    const categoryName = product.Category?.name || "General";
+    const pigment = pigmentFromSeed(categoryName);
+
     return (
       <article
         key={product.id}
-        className="group flex h-full flex-col overflow-hidden rounded-xl border border-black/10 bg-white text-left shadow-[0_8px_20px_-20px_rgba(0,0,0,0.55)] transition duration-300 hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_14px_24px_-20px_rgba(0,0,0,0.55)]"
+        className={`group flex h-full flex-col overflow-hidden rounded-xl border border-black/10 text-left shadow-[0_8px_20px_-20px_rgba(0,0,0,0.55)] transition duration-300 hover:-translate-y-0.5 hover:border-black/20 ${pigment.shell} ${pigment.glow}`}
       >
+        <div className={`h-1.5 w-full ${pigment.strip}`} />
         <div className="relative h-24 overflow-hidden bg-linear-to-br from-amber-50 via-white to-cyan-50">
           {product.image ? (
             <Image
@@ -285,6 +541,9 @@ export default function PosPage() {
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="line-clamp-2 text-xs font-semibold text-black">{product.name}</h3>
+              <p className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${pigment.chip}`}>
+                {categoryName}
+              </p>
               <p className="mt-1 text-xs font-medium text-black/55">{formatMoney(product.price)}</p>
             </div>
             <span
@@ -314,10 +573,10 @@ export default function PosPage() {
               <button
                 type="button"
                 onClick={() => addToCart(product)}
-                disabled={isMaxViewport}
+                disabled={product.stock <= 0}
                 className="rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition group-hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {isMaxViewport ? "Add off" : "Add"}
+                Add
               </button>
             </div>
           </div>
@@ -376,13 +635,22 @@ export default function PosPage() {
                 </p>
                 <h3 className="mt-1 text-xl font-semibold text-black">Sale completed</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setReceipt(null)}
-                className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-              >
-                Close receipt
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={printReceipt}
+                  className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+                >
+                  Print receipt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceipt(null)}
+                  className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                >
+                  Close receipt
+                </button>
+              </div>
             </div>
             <div className="grid gap-6 p-6 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="rounded-2xl border border-emerald-100 bg-white p-5">
@@ -524,9 +792,19 @@ export default function PosPage() {
                   </div>
                 </div>
               ) : filteredProducts.length > 0 ? (
-                <div className="rounded-2xl border border-black/10 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3">
-                  <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{productCards}</div>
-                </div>
+                <>
+                  <div className="rounded-2xl border border-black/10 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3">
+                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">{productCards}</div>
+                  </div>
+                  <PaginationControls
+                    totalItems={filteredProducts.length}
+                    currentPage={safePage}
+                    pageSize={POS_PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                    itemLabel="products"
+                    className="mt-3"
+                  />
+                </>
               ) : (
                 <div className="rounded-3xl border border-dashed border-black/15 bg-black/1.5 px-6 py-14 text-center">
                   <p className="text-lg font-semibold text-black">No products match these filters</p>
@@ -637,7 +915,7 @@ export default function PosPage() {
               </div>
               <button
                 type="button"
-                onClick={completeSale}
+                onClick={openCheckoutConfirm}
                 disabled={submitting || cart.length === 0}
                 className="mt-2 w-full rounded-full bg-linear-to-r from-emerald-500 to-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(16,185,129,0.75)] transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -651,6 +929,82 @@ export default function PosPage() {
               >
                 Clear cart
               </button>
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-black/10 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/45">Recent sales</p>
+                  <h4 className="mt-1 text-base font-semibold text-black">Quick transaction log</h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void loadRecentSales()}
+                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-black/3"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {loadingRecentSales ? (
+                <div className="mt-3 space-y-2">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="h-14 animate-pulse rounded-2xl border border-black/8 bg-black/3" />
+                  ))}
+                </div>
+              ) : recentSales.length > 0 ? (
+                <div className="mt-3 space-y-2">
+                  {recentSales.map((sale) => {
+                    const salePigment = pigmentFromSeed(sale.id || sale.cashier?.name || "sale");
+
+                    return (
+                    <div
+                      key={sale.id}
+                      className={`overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_10px_22px_-20px_rgba(0,0,0,0.45)] ${salePigment.glow}`}
+                    >
+                      <div className={`h-1 w-full ${salePigment.strip}`} />
+                      <div className={`px-3 py-2.5 ${salePigment.shell}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-black">
+                            {sale.cashier?.name || "Cashier"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-black/55">
+                            {sale.createdAt
+                              ? new Intl.DateTimeFormat("en-US", {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                }).format(new Date(sale.createdAt))
+                              : "Time unavailable"}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${salePigment.chip}`}>
+                          {sale.status}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-xs text-black/60">
+                        <span>{sale.itemCount} item{sale.itemCount === 1 ? "" : "s"}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-black">{formatMoney(sale.totalAmount)}</span>
+                          <button
+                            type="button"
+                            onClick={() => void openSaleDetails(sale.id)}
+                            className="rounded-full border border-black/10 bg-white px-2.5 py-1 text-[10px] font-semibold text-black transition hover:bg-black/3"
+                          >
+                            View sale
+                          </button>
+                        </div>
+                      </div>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-3 rounded-2xl border border-dashed border-black/15 bg-black/2 px-4 py-5 text-center text-sm text-black/60">
+                  No transactions yet in this session.
+                </div>
+              )}
             </div>
           </aside>
         </section>
@@ -721,6 +1075,226 @@ export default function PosPage() {
                   className="w-full rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black/90"
                 >
                   Add to cart
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedRecentSaleId && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-sale-details-title"
+            onClick={closeSaleDetails}
+          >
+            <div
+              className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-black/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_42%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.14),transparent_36%),linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="pointer-events-none absolute -right-10 -top-8 h-28 w-28 rounded-full bg-amber-200/30 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full bg-cyan-200/25 blur-2xl" />
+
+              <div className="relative flex items-center justify-between border-b border-black/10 bg-white/70 px-5 py-4 backdrop-blur-sm">
+                <h3 id="pos-sale-details-title" className="text-base font-semibold text-black">Sale details</h3>
+                <button
+                  type="button"
+                  onClick={closeSaleDetails}
+                  className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-semibold text-black transition hover:bg-black/3"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="relative max-h-[72vh] space-y-4 overflow-y-auto p-5">
+                {loadingSelectedRecentSale ? (
+                  <div className="space-y-3">
+                    <div className="h-14 animate-pulse rounded-2xl border border-black/10 bg-black/3" />
+                    <div className="h-24 animate-pulse rounded-2xl border border-black/10 bg-black/3" />
+                    <div className="h-40 animate-pulse rounded-2xl border border-black/10 bg-black/3" />
+                  </div>
+                ) : selectedRecentSaleError ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {selectedRecentSaleError}
+                  </div>
+                ) : selectedRecentSale ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-amber-100 bg-[linear-gradient(180deg,#fffbeb_0%,#ffffff_100%)] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Sale ID</p>
+                        <p className="mt-2 break-all text-xs font-semibold text-black">{selectedRecentSale.sale.id}</p>
+                      </div>
+                      <div className="rounded-2xl border border-sky-100 bg-[linear-gradient(180deg,#f0f9ff_0%,#ffffff_100%)] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Cashier</p>
+                        <p className="mt-2 text-sm font-semibold text-black">{selectedRecentSale.sale.cashier?.name || "Cashier"}</p>
+                      </div>
+                      <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,#ecfdf5_0%,#ffffff_100%)] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Status</p>
+                        <p className="mt-2 inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">{selectedRecentSale.sale.status}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-black/10 bg-white/90 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Time</p>
+                        <p className="mt-2 text-sm font-semibold text-black">
+                          {selectedRecentSale.sale.createdAt
+                            ? new Intl.DateTimeFormat("en-US", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              }).format(new Date(selectedRecentSale.sale.createdAt))
+                            : "Time unavailable"}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-black/10 bg-white/90 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Items</p>
+                        <p className="mt-2 text-sm font-semibold text-black">{selectedRecentSale.sale.itemCount}</p>
+                      </div>
+                      <div className="rounded-2xl border border-black/10 bg-white/90 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Total</p>
+                        <p className="mt-2 text-sm font-semibold text-black">{formatMoney(selectedRecentSale.sale.totalAmount)}</p>
+                      </div>
+                    </div>
+
+                    {selectedRecentSale.sale.note ? (
+                      <div className="rounded-2xl border border-amber-100 bg-[linear-gradient(180deg,#fffdf5_0%,#ffffff_100%)] p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Transaction note</p>
+                        <p className="mt-2 text-sm text-black/75">{selectedRecentSale.sale.note}</p>
+                      </div>
+                    ) : null}
+
+                    <div className="overflow-x-auto rounded-2xl border border-black/10 bg-white/90">
+                      <table className="min-w-140 divide-y divide-black/10 text-sm">
+                        <thead className="bg-[linear-gradient(90deg,rgba(251,191,36,0.16)_0%,rgba(34,211,238,0.16)_100%)]">
+                          <tr className="text-left text-black/55">
+                            <th className="px-4 py-3 font-semibold">Product</th>
+                            <th className="px-4 py-3 font-semibold">Qty</th>
+                            <th className="px-4 py-3 font-semibold">Price</th>
+                            <th className="px-4 py-3 font-semibold">Line</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black/5 bg-white">
+                          {selectedRecentSale.items.map((item) => (
+                            <tr key={item.id}>
+                              <td className="max-w-55 px-4 py-3 font-medium text-black">
+                                <span className="block truncate" title={item.productName}>{item.productName}</span>
+                              </td>
+                              <td className="px-4 py-3 text-black/65">{item.quantity}</td>
+                              <td className="px-4 py-3 text-black/65">{formatMoney(item.priceAtSale)}</td>
+                              <td className="px-4 py-3 font-semibold text-black">{formatMoney(item.lineTotal)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCheckoutConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-confirm-sale-title"
+            onClick={() => setShowCheckoutConfirm(false)}
+          >
+            <div
+              className="w-full max-w-2xl overflow-hidden rounded-2xl border border-black/10 bg-white shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
+                <h3 id="pos-confirm-sale-title" className="text-base font-semibold text-black">Confirm transaction</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutConfirm(false)}
+                  className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-semibold text-black transition hover:bg-black/3"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="max-h-[72vh] space-y-4 overflow-y-auto p-5">
+                <p className="text-sm text-black/65">
+                  Review the selected items and total before completing this sale.
+                </p>
+
+                <div className="overflow-x-auto rounded-2xl border border-black/10">
+                  <table className="min-w-140 divide-y divide-black/10 text-sm">
+                    <thead className="bg-black/2">
+                      <tr className="text-left text-black/55">
+                        <th className="px-4 py-3 font-semibold">Product</th>
+                        <th className="px-4 py-3 font-semibold">Qty</th>
+                        <th className="px-4 py-3 font-semibold">Price</th>
+                        <th className="px-4 py-3 font-semibold">Line</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5 bg-white">
+                      {cart.map((line) => (
+                        <tr key={line.id}>
+                          <td className="max-w-55 px-4 py-3 font-medium text-black">
+                            <span className="block truncate" title={line.name}>{line.name}</span>
+                          </td>
+                          <td className="px-4 py-3 text-black/65">{line.quantity}</td>
+                          <td className="px-4 py-3 text-black/65">{formatMoney(line.price)}</td>
+                          <td className="px-4 py-3 font-semibold text-black">
+                            {formatMoney(Number(line.price) * line.quantity)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-black/10 bg-black/2 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Items</p>
+                    <p className="mt-2 text-lg font-semibold text-black">{cartCount}</p>
+                  </div>
+                  <div className="rounded-2xl border border-black/10 bg-black/2 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Status</p>
+                    <p className="mt-2 text-lg font-semibold text-black">Pending confirmation</p>
+                  </div>
+                  <div className="rounded-2xl border border-black/10 bg-black/2 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">Total</p>
+                    <p className="mt-2 text-lg font-semibold text-black">{formatMoney(subtotal)}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-black/45">
+                    Optional note
+                  </label>
+                  <textarea
+                    value={transactionNote}
+                    onChange={(event) => setTransactionNote(event.target.value.slice(0, 280))}
+                    placeholder="Add context for this sale (optional)..."
+                    rows={3}
+                    className="mt-2 w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-black outline-none transition placeholder:text-black/35 focus:border-black/30"
+                  />
+                  <p className="mt-1 text-right text-[11px] text-black/45">{transactionNote.length}/280</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-black/10 px-5 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutConfirm(false)}
+                  className="rounded-full border border-black/10 bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void completeSale()}
+                  disabled={submitting || cart.length === 0}
+                  className="rounded-full bg-linear-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:from-emerald-600 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? "Completing sale..." : "Confirm sale"}
                 </button>
               </div>
             </div>

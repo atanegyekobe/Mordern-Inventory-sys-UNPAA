@@ -43,6 +43,19 @@ const normalizeItems = (items) => {
   }));
 };
 
+const normalizeSaleNote = (note) => {
+  if (note === undefined || note === null) {
+    return null;
+  }
+
+  const value = String(note).trim();
+  if (!value) {
+    return null;
+  }
+
+  return value.slice(0, 280);
+};
+
 const ensureOfflineSaleTables = async () => {
   await sequelize.query(`
     CREATE TABLE IF NOT EXISTS offline_sales (
@@ -51,10 +64,13 @@ const ensureOfflineSaleTables = async () => {
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
       total_amount INTEGER NOT NULL DEFAULT 0,
       status VARCHAR(16) NOT NULL CHECK (status IN ('COMPLETED', 'CANCELLED')),
+      note VARCHAR(280),
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     );
   `);
+
+  await sequelize.query("ALTER TABLE offline_sales ADD COLUMN IF NOT EXISTS note VARCHAR(280);");
 
   await sequelize.query(`
     CREATE TABLE IF NOT EXISTS offline_sale_items (
@@ -74,7 +90,7 @@ const ensureOfflineSaleTables = async () => {
   await sequelize.query("CREATE INDEX IF NOT EXISTS idx_offline_sale_items_product_id ON offline_sale_items(product_id);");
 };
 
-const createPosSale = async ({ shopId, userId, items }) => {
+const createPosSale = async ({ shopId, userId, items, note }) => {
   if (!shopId) {
     throw new PosSaleError(400, "Shop context is required for POS sale.");
   }
@@ -84,6 +100,7 @@ const createPosSale = async ({ shopId, userId, items }) => {
   }
 
   const normalizedItems = normalizeItems(items);
+  const normalizedNote = normalizeSaleNote(note);
   await ensureOfflineSaleTables();
 
   return sequelize.transaction(async (transaction) => {
@@ -134,6 +151,7 @@ const createPosSale = async ({ shopId, userId, items }) => {
         UserId: userId,
         totalAmount,
         status: "COMPLETED",
+        note: normalizedNote,
       },
       { transaction }
     );
@@ -187,6 +205,7 @@ const createPosSale = async ({ shopId, userId, items }) => {
         shopId: sale.ShopId,
         userId: sale.UserId,
         status: sale.status,
+        note: sale.note || null,
         totalAmountMinor: sale.totalAmount,
         totalAmount: minorToMajor(sale.totalAmount),
         createdAt: sale.createdAt,
