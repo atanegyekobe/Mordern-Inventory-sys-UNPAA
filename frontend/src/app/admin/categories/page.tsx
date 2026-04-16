@@ -153,7 +153,7 @@ export default function AdminCategoriesPage() {
   );
 
   return (
-    <AdminShell title="Categories">
+    <AdminShell title="Categories" ownerOnly>
       <div className="flex flex-col gap-6">
         <form onSubmit={handleCreate} className="space-y-3">
           <div className="rounded-2xl border border-black/10 bg-black/2 px-4 py-3 text-sm text-black/65">

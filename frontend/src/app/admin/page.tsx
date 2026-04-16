@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import api from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 type Summary = {
   users: number;
@@ -21,8 +22,17 @@ type StatCard = {
 };
 
 export default function AdminOverviewPage() {
+  const { user, shops, activeShopId } = useAuth();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const activeShop = activeShopId
+    ? shops.find((shop) => shop.id === activeShopId) || null
+    : shops.length === 1
+    ? shops[0]
+    : null;
+
+  const isOwner = Boolean(user && (user.role === "admin" || activeShop?.role === "OWNER"));
 
   useEffect(() => {
     const load = async () => {
@@ -71,16 +81,19 @@ export default function AdminOverviewPage() {
       label: "Manage products",
       description: "Edit stock, pricing, and product status.",
       href: "/admin/products",
+      ownerOnly: true,
     },
     {
       label: "Update categories",
       description: "Keep inventory grouped and searchable.",
       href: "/admin/categories",
+      ownerOnly: true,
     },
     {
       label: "Bulk import",
       description: "Load inventory updates from CSV.",
       href: "/admin/import",
+      ownerOnly: true,
     },
     {
       label: "Open POS",
@@ -88,11 +101,17 @@ export default function AdminOverviewPage() {
       href: "/admin/pos",
     },
     {
+      label: "Manage team",
+      description: "Add staff accounts and control shop access.",
+      href: "/admin/team",
+      ownerOnly: true,
+    },
+    {
       label: "Sales and movement",
       description: "Review transaction flow and inventory turnover.",
       href: "/admin/sales",
     },
-  ];
+  ].filter((action) => isOwner || !action.ownerOnly);
 
   return (
     <AdminShell title="Admin overview">

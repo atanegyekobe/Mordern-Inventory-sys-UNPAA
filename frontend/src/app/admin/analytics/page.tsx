@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import BackButton from "@/components/BackButton";
+import { ShopOwnerRoute } from "@/components/RouteGuards";
 import api from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
@@ -253,7 +254,8 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <motion.div
+    <ShopOwnerRoute>
+      <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
@@ -564,6 +566,7 @@ export default function AnalyticsPage() {
           </div>
         </article>
       </section>
-    </motion.div>
+      </motion.div>
+    </ShopOwnerRoute>
   );
 }

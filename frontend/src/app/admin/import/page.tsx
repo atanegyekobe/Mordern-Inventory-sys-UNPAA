@@ -174,7 +174,7 @@ Another Product,Another sample,149.99,75.00,SKU-002,50,draft,Electronics`;
   );
 
   return (
-    <AdminShell title="CSV Product Import">
+    <AdminShell title="CSV Product Import" ownerOnly>
       <div className="p-6 space-y-6">
         <BackButton />
 
@@ -345,7 +345,7 @@ Another Product,Another sample,149.99,75.00,SKU-002,50,draft,Electronics`;
             <div className="grid gap-4 md:grid-cols-3 mb-4">
               <div className="rounded-lg bg-green-50 border border-green-200 p-4">
                 <p className="text-2xl font-bold text-green-700">{importResults.summary.successful}</p>
-                <p className="text-xs text-green-600">Successfully Imported</p>
+                  <h1 className="text-3xl font-bold">Bulk Product Import</h1>
               </div>
               <div className="rounded-lg bg-red-50 border border-red-200 p-4">
                 <p className="text-2xl font-bold text-red-700">{importResults.summary.failed}</p>

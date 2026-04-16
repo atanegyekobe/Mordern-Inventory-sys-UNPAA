@@ -3,7 +3,7 @@ const router = express.Router();
 const messageController = require("../controllers/messageController");
 const auth = require("../middleware/auth");
 const { resolveShopContext } = require("../middleware/shopContext");
-const requireShopAdminAccess = require("../middleware/requireShopAdminAccess");
+const requireShopStaffAccess = require("../middleware/requireShopStaffAccess");
 
 // All authenticated users can access these routes
 router.get("/", auth, resolveShopContext, messageController.getAllMessages);
@@ -13,14 +13,14 @@ router.post("/", auth, resolveShopContext, messageController.createMessage);
 router.post("/:id/read", auth, resolveShopContext, messageController.markAsRead);
 
 // Admin-only: create message to any customer
-router.post("/admin/send", auth, resolveShopContext, requireShopAdminAccess, messageController.createAdminMessage);
+router.post("/admin/send", auth, resolveShopContext, requireShopStaffAccess, messageController.createAdminMessage);
 
 router.post("/:id/replies", auth, resolveShopContext, messageController.addReply);
 
-router.get("/stats/summary", auth, resolveShopContext, requireShopAdminAccess, messageController.getMessageStats);
+router.get("/stats/summary", auth, resolveShopContext, requireShopStaffAccess, messageController.getMessageStats);
 
 // Admin-only routes
-router.put("/:id/status", auth, resolveShopContext, requireShopAdminAccess, messageController.updateMessageStatus);
-router.delete("/:id", auth, resolveShopContext, requireShopAdminAccess, messageController.deleteMessage);
+router.put("/:id/status", auth, resolveShopContext, requireShopStaffAccess, messageController.updateMessageStatus);
+router.delete("/:id", auth, resolveShopContext, requireShopStaffAccess, messageController.deleteMessage);
 
 module.exports = router;

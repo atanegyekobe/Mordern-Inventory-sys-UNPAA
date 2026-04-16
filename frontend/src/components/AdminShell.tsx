@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import NavBar from "./NavBar";
-import { AdminRoute } from "./RouteGuards";
+import { AdminRoute, ShopOwnerRoute } from "./RouteGuards";
 
 type AdminShellProps = {
   title: string;
   children: React.ReactNode;
+  ownerOnly?: boolean;
 };
 
 const links = [
@@ -17,13 +19,36 @@ const links = [
   { href: "/admin/pos", label: "POS" },
   { href: "/admin/products", label: "Inventory" },
   { href: "/admin/import", label: "Import" },
+  { href: "/admin/team", label: "Team" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/messages", label: "Messages" },
 ];
 
-export default function AdminShell({ title, children }: AdminShellProps) {
+const ownerOnlyHrefs = new Set([
+  "/admin/analytics",
+  "/admin/products",
+  "/admin/team",
+  "/admin/categories",
+  "/admin/import",
+]);
+
+export default function AdminShell({ title, children, ownerOnly = false }: AdminShellProps) {
   const pathname = usePathname();
+  const { user, shops, activeShopId } = useAuth();
+
+  const activeShop = activeShopId
+    ? shops.find((shop) => shop.id === activeShopId) || null
+    : shops.length === 1
+    ? shops[0]
+    : null;
+
+  const isOwner = Boolean(user && (user.role === "admin" || activeShop?.role === "OWNER"));
+
+  const visibleLinks = isOwner
+    ? links
+    : links.filter((link) => !ownerOnlyHrefs.has(link.href));
+
   const isActiveLink = (href: string) => {
     if (href === "/admin") {
       return pathname === "/admin";
@@ -31,14 +56,13 @@ export default function AdminShell({ title, children }: AdminShellProps) {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  return (
-    <AdminRoute>
+  const shellContent = (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fef3c7_0%,transparent_26%),radial-gradient(circle_at_top_right,#cffafe_0%,transparent_24%),linear-gradient(180deg,#fafaf9_0%,#f8fafc_100%)]">
         <NavBar />
         <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-5 overflow-x-auto pb-2 md:hidden">
             <div className="flex min-w-max gap-2">
-              {links.map((link) => {
+              {visibleLinks.map((link) => {
                 const active = isActiveLink(link.href);
                 return (
                   <Link
@@ -70,7 +94,7 @@ export default function AdminShell({ title, children }: AdminShellProps) {
                 </div>
 
                 <nav className="space-y-1.5">
-                  {links.map((link) => {
+                  {visibleLinks.map((link) => {
                     const active = isActiveLink(link.href);
                     return (
                       <Link
@@ -106,6 +130,15 @@ export default function AdminShell({ title, children }: AdminShellProps) {
           </div>
         </div>
       </div>
+  );
+
+  if (ownerOnly) {
+    return <ShopOwnerRoute>{shellContent}</ShopOwnerRoute>;
+  }
+
+  return (
+    <AdminRoute>
+      {shellContent}
     </AdminRoute>
   );
 }

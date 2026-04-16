@@ -2,16 +2,17 @@ const express = require("express");
 const auth = require("../middleware/auth");
 const { resolveShopContext } = require("../middleware/shopContext");
 const requireShopAdminAccess = require("../middleware/requireShopAdminAccess");
+const requireShopStaffAccess = require("../middleware/requireShopStaffAccess");
 const { uploadCsv } = require("../config/multer");
 const { summary, analytics, salesManagement, getLowStockAlerts } = require("../controllers/adminController");
 const { previewImport, executeImport } = require("../controllers/importController");
 
 const router = express.Router();
 
-router.get("/summary", auth, resolveShopContext, requireShopAdminAccess, summary);
+router.get("/summary", auth, resolveShopContext, requireShopStaffAccess, summary);
 router.get("/analytics", auth, resolveShopContext, requireShopAdminAccess, analytics);
-router.get("/sales-management", auth, resolveShopContext, requireShopAdminAccess, salesManagement);
-router.get("/low-stock-alerts", auth, resolveShopContext, requireShopAdminAccess, getLowStockAlerts);
+router.get("/sales-management", auth, resolveShopContext, requireShopStaffAccess, salesManagement);
+router.get("/low-stock-alerts", auth, resolveShopContext, requireShopStaffAccess, getLowStockAlerts);
 
 // CSV Import routes
 router.post("/products/import/preview", auth, resolveShopContext, requireShopAdminAccess, uploadCsv.single("file"), previewImport);

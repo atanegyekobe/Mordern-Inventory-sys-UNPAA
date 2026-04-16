@@ -3,42 +3,42 @@ const router = express.Router();
 const customerController = require("../controllers/customerController");
 const auth = require("../middleware/auth");
 const { resolveShopContext } = require("../middleware/shopContext");
-const requireShopAdminAccess = require("../middleware/requireShopAdminAccess");
+const requireShopStaffAccess = require("../middleware/requireShopStaffAccess");
 
-// All routes are admin-only
+// Operational customer routes are available to OWNER/STAFF
 router.get(
   "/",
   auth,
   resolveShopContext,
-  requireShopAdminAccess,
+  requireShopStaffAccess,
   customerController.getAllCustomers
 );
 router.get(
   "/stats",
   auth,
   resolveShopContext,
-  requireShopAdminAccess,
+  requireShopStaffAccess,
   customerController.getCustomerStats
 );
 router.get(
   "/:id",
   auth,
   resolveShopContext,
-  requireShopAdminAccess,
+  requireShopStaffAccess,
   customerController.getCustomerById
 );
 router.put(
   "/:id",
   auth,
   resolveShopContext,
-  requireShopAdminAccess,
+  requireShopStaffAccess,
   customerController.updateCustomer
 );
 router.delete(
   "/:id",
   auth,
   resolveShopContext,
-  requireShopAdminAccess,
+  requireShopStaffAccess,
   customerController.deleteCustomer
 );
 
