@@ -34,6 +34,7 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (payload: AuthResponse) => Promise<void>;
   setActiveShop: (shopId: string | null) => void;
+  updateShopSummary: (shopId: string, updates: Partial<ShopSummary>) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
 };
@@ -49,6 +50,7 @@ const AuthContext = createContext<AuthContextValue>({
   isLoading: true,
   login: async () => {},
   setActiveShop: () => {},
+  updateShopSummary: () => {},
   logout: () => {},
   refreshUser: async () => {},
 });
@@ -147,6 +149,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveShopState(shops, shopId);
   };
 
+  const updateShopSummary = (shopId: string, updates: Partial<ShopSummary>) => {
+    const nextShops = shops.map((shop) =>
+      shop.id === shopId
+        ? {
+            ...shop,
+            ...updates,
+          }
+        : shop
+    );
+    saveShopState(nextShops, activeShopId);
+  };
+
   const logout = () => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -160,7 +174,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, shops, activeShopId, isLoading, login, setActiveShop, logout, refreshUser }}
+      value={{
+        user,
+        shops,
+        activeShopId,
+        isLoading,
+        login,
+        setActiveShop,
+        updateShopSummary,
+        logout,
+        refreshUser,
+      }}
     >
       <div suppressHydrationWarning>{children}</div>
     </AuthContext.Provider>

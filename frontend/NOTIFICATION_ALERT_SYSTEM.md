@@ -2,6 +2,12 @@
 
 A comprehensive notification system for displaying unread message counts, badges, and alerts throughout the application.
 
+## Current Process Notes (April 2026)
+
+- Notification badge and bell are active for authenticated storefront and admin users.
+- Admin message workflows are available to OWNER and STAFF.
+- Owner-only modules (analytics, inventory, categories, import, team) are hidden from STAFF, so alerts should originate from allowed modules for STAFF sessions.
+
 ## Components
 
 ### 1. NotificationBadge
@@ -230,6 +236,11 @@ The system automatically connects to:
 - Counts messages with `status === "open"`
 - Auto-refreshes every 60 seconds
 - Only fetches when user is authenticated
+
+## Role-Aware Behavior
+
+- OWNER users can receive notifications from all admin message flows.
+- STAFF users receive message notifications for operational pages (`/admin/messages`, `/account/support`) and should not rely on owner-only module actions.
 
 ## Future Enhancements
 

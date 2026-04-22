@@ -2,6 +2,12 @@
 
 A global notification system for displaying pop-up alerts (success, error, info, warning).
 
+## Current Process Notes (April 2026)
+
+- Used across storefront, admin, and POS workflows.
+- Critical POS examples now include out-of-stock warnings, sale confirmation, and print fallback notices.
+- Team-management and role-based admin actions should surface clear permission toasts when denied.
+
 ## Usage
 
 ```tsx
@@ -69,11 +75,14 @@ toast.info("Important message", 0);
 
 ## Examples
 
-### Product Page - Add to Cart
+### POS - Add to Cart
 ```tsx
 const handleAddToCart = async (product: Product) => {
   try {
-    await api.post("/cart/add", { productId: product.id });
+    if (product.stock <= 0) {
+      toast.warning(`${product.name} is out of stock.`);
+      return;
+    }
     toast.success(`${product.name} added to cart!`);
   } catch {
     toast.error("Failed to add to cart");
@@ -81,27 +90,26 @@ const handleAddToCart = async (product: Product) => {
 };
 ```
 
-### Admin Page - Delete Product
+### Admin Page - Save Team Member
 ```tsx
-const handleDeleteProduct = async (id: string) => {
+const handleAddMember = async () => {
   try {
-    await api.delete(`/products/${id}`);
-    toast.success("Product deleted");
-    // refresh list
+    await api.post(`/shops/${activeShopId}/members`, { email, role });
+    toast.success("Team member saved.");
   } catch {
-    toast.error("Failed to delete product");
+    toast.error("Unable to add member.");
   }
 };
 ```
 
-### Checkout - Order Confirmation
+### POS - Complete Sale
 ```tsx
-const handleCheckout = async () => {
+const handleCompleteSale = async () => {
   try {
-    const order = await api.post("/checkout", cartItems);
-    toast.success("Order placed successfully!");
+    await api.post("/pos/sale", { items, note });
+    toast.success("Sale completed successfully.");
   } catch {
-    toast.error("Checkout failed. Please try again.");
+    toast.error("Failed to complete sale.");
   }
 };
 ```

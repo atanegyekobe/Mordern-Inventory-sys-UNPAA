@@ -4,6 +4,12 @@
 
 The Product Variants system allows a single product to have multiple variations (e.g., different sizes, colors, styles) with unique pricing, stock levels, and SKUs. This eliminates product duplication while providing flexible inventory management.
 
+## Current Process Notes (April 2026)
+
+- Product and variant management is OWNER-only in admin.
+- STAFF users can sell variants through operational flows (POS/sales visibility) but should not modify catalog structure.
+- Shop context is required for all variant operations (`x-shop-id` via authenticated session).
+
 ## Database Schema
 
 ### ProductVariant Model
@@ -41,7 +47,7 @@ Product (1) ----< ProductVariant (Many)
 #### Create Variant
 ```
 POST /api/products/:productId/variants
-Authorization: Bearer {admin_token}
+Authorization: Bearer {owner_token}
 
 Request Body:
 {
@@ -113,7 +119,7 @@ Response (200):
 #### Update Variant
 ```
 PATCH /api/products/:productId/variants/:variantId
-Authorization: Bearer {admin_token}
+Authorization: Bearer {owner_token}
 
 Request Body (all fields optional):
 {
@@ -134,7 +140,7 @@ Response (200):
 #### Update Variant Stock
 ```
 PATCH /api/products/:productId/variants/:variantId/stock
-Authorization: Bearer {admin_token}
+Authorization: Bearer {owner_token}
 
 Request Body:
 {
@@ -157,7 +163,7 @@ Response (200):
 #### Delete Variant
 ```
 DELETE /api/products/:productId/variants/:variantId
-Authorization: Bearer {admin_token}
+Authorization: Bearer {owner_token}
 
 Response (200):
 {

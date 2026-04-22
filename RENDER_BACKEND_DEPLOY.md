@@ -77,8 +77,18 @@ After deploy, verify:
 
 1. `GET /health` returns success.
 2. Auth endpoints work (`/api/auth/login`, `/api/auth/register`).
-3. Product list loads (`/api/products/public`).
-4. Checkout/payment routes work only if payment env vars are configured.
+3. Shop context endpoints work with active shop:
+   - OWNER can access `/api/shops/:shopId/members`.
+   - STAFF receives permission denial on owner-only team endpoints.
+4. Operational endpoints work for OWNER and STAFF:
+   - `/api/pos/products`
+   - `/api/pos/recent-sales`
+   - `/api/admin/sales-management`
+5. OWNER-only endpoints are blocked for STAFF:
+   - `/api/admin/analytics`
+   - `/api/admin/products/import/preview`
+
+If permissions were recently changed and behavior looks stale, force a service restart after deploy.
 
 ## 8. Security Checklist
 

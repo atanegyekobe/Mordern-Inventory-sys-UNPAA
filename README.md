@@ -1,6 +1,43 @@
-# Ellora Supply - Ecommerce Platform
+# Ellora Supply - Inventory and POS Platform
 
-A full-stack ecommerce platform with customer storefront and admin dashboard built with Node.js, Express, PostgreSQL, Next.js, and React.
+A full-stack inventory-first platform with customer storefront, operations dashboard, and POS built with Node.js, Express, PostgreSQL, Next.js, and React.
+
+## Current Process (April 2026)
+
+This repository is now centered on inventory operations and in-store sales processing.
+
+- POS has a full workflow: product lookup, cart, two-step sale confirmation, optional transaction note, receipt print, and recent-sales detail modal.
+- Team management is available in admin: add existing users by email to the active shop and remove members.
+- Multi-shop context is enforced via `x-shop-id` and membership in `user_shops`.
+
+### Access Model (OWNER vs STAFF)
+
+Shop permissions are controlled by `user_shops.role` (not the global `users.role`):
+
+- OWNER-only modules:
+  - Inventory Insights (`/admin/analytics`)
+  - Inventory (`/admin/products`)
+  - Categories (`/admin/categories`)
+  - Import (`/admin/import`)
+  - Team (`/admin/team`)
+- OWNER + STAFF modules:
+  - POS (`/admin/pos`)
+  - Stock Movement (`/admin/sales`)
+  - Customers (`/admin/customers`)
+  - Messages (`/admin/messages`)
+
+The UI hides OWNER-only links for STAFF and backend middleware enforces the same restrictions.
+
+### Shop Identity and Branding
+
+- The top-left app brand is now shop-aware for the active shop context.
+- When an active shop is selected, the header logo/name uses that shop identity instead of the static app label.
+- Owners (and platform admins) can update shop identity in Profile:
+  - Rename shop
+  - Set logo by URL
+  - Upload logo file (stored under `/uploads/...`)
+- Changes are reflected immediately in client shop state and navbar branding.
+- Shop slug is preserved when renaming (name-only identity update).
 
 ## 🧭 Operations Docs
 
@@ -18,13 +55,13 @@ A full-stack ecommerce platform with customer storefront and admin dashboard bui
 - 💳 Cart count badge in navigation
 
 ### Admin Features
-- 📊 Dashboard with summary statistics (users, products, orders)
-- 🏷️ Category management (create, edit, delete)
-- 📦 Product management (CRUD with image uploads)
-- 🖼️ Image upload support for products
-- 📋 Order management and status tracking
-- 🔒 Role-based access control
-- 🎨 Clean admin interface with sidebar navigation
+- 📊 Dashboard with inventory/operations summary
+- 🧾 POS with receipt print and recent sales details
+- 📈 Stock movement analysis and profitability views
+- 👥 Team management by shop membership (OWNER/STAFF)
+- 🏷️ Category and product management (OWNER-only)
+- 📥 Bulk import for inventory updates (OWNER-only)
+- 🔒 Shop-aware role-based access control
 
 ## 🛠️ Tech Stack
 
@@ -192,15 +229,39 @@ Authorization: Bearer <token>
 
 #### 🔐 Auth
 - `POST /auth/register` - Register new user
-  - Body: `{ name, email, password }`
-  - Returns: `{ token, user }`
+  - Body: `{ name, email, password, role?: "customer" | "business", shopName?: string }`
+  - Returns: `{ token, user, shops, activeShopId }`
   
 - `POST /auth/login` - Login user
-  - Body: `{ email, password }`
-  - Returns: `{ token }`
+  - Body: `{ email, password, activeShopId? }`
+  - Returns: `{ token, user, shops, activeShopId, requiresShopSelection }`
   
 - `GET /auth/me` - Get current user info (requires auth)
   - Returns: `{ user: { id, name, email, role } }`
+
+#### 👥 Shop Team Management
+
+- `GET /shops/:shopId/members` - List shop members (OWNER-only)
+- `POST /shops/:shopId/members` - Add/update member by email and role (OWNER-only)
+  - Body: `{ email, role: "OWNER" | "STAFF" }`
+- `DELETE /shops/:shopId/members/:userId` - Remove member (OWNER-only)
+
+#### 🏪 Shop Identity
+
+- `PATCH /shops/:shopId` - Update shop identity (OWNER/platform admin)
+  - Body: `{ name?, logoUrl? }`
+- `POST /shops/:shopId/logo` - Upload shop logo image (OWNER/platform admin)
+  - Multipart field: `logo`
+  - Returns: `{ logoUrl, shop, message }`
+
+#### 🧾 POS
+
+- `GET /pos/products` - List active products for sale (OWNER + STAFF)
+- `GET /pos/products/search?q=...` - Search products by name/SKU (OWNER + STAFF)
+- `POST /pos/sale` - Complete sale (OWNER + STAFF)
+  - Body: `{ items: [{ productId, quantity }], note? }`
+- `GET /pos/recent-sales` - Recent transaction cards (OWNER + STAFF)
+- `GET /pos/recent-sales/:saleId` - Sale detail modal payload (OWNER + STAFF)
 
 #### 📦 Products
 - `GET /products` - Get product list

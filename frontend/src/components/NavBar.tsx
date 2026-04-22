@@ -8,16 +8,40 @@ import { useToast } from "@/hooks/useToast";
 import { useNotifications } from "@/lib/notification-alert-context";
 import NotificationBadge from "@/components/NotificationBadge";
 import NotificationBell from "@/components/NotificationBell";
+import { toAssetUrl } from "@/lib/assets";
 
 export default function NavBar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, shops, logout } = useAuth();
+  const { user, shops, activeShopId, logout } = useAuth();
   const toast = useToast();
   const { unreadMessages } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const firstName = user?.name?.split(" ")[0] ?? "Guest";
+  const activeShop = shops.find((shop) => shop.id === activeShopId) || null;
+  const rawLogo = activeShop?.config && typeof activeShop.config === "object"
+    ? ((activeShop.config as { branding?: { logo?: string } }).branding?.logo || "")
+    : "";
+  const logoUrl = toAssetUrl(rawLogo);
+  const brandName = activeShop?.name || "EllY'Shop";
+
+  const brandInitials = (name: string) => {
+    const tokens = String(name)
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (tokens.length === 0) {
+      return "ES";
+    }
+
+    if (tokens.length === 1) {
+      return tokens[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${tokens[0][0]}${tokens[1][0]}`.toUpperCase();
+  };
 
   const isActiveRoute = (href: string) => {
     if (href === "/") {
@@ -52,10 +76,19 @@ export default function NavBar() {
         <div className="overflow-hidden rounded-2xl border border-rose-100 bg-white/85 shadow-[0_12px_30px_-18px_rgba(18,17,14,0.45)] backdrop-blur">
           <div className="flex items-center gap-3 px-4 py-3 md:px-6">
             <Link href="/" className="flex min-w-0 items-center gap-3">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-rose-500 via-orange-500 to-amber-500 text-xs font-black tracking-[0.2em] text-white">
-                ES
-              </span>
-              <span className="truncate text-lg font-semibold tracking-[0.08em] md:text-xl">EllY&apos;Shop</span>
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt={`${brandName} logo`}
+                  className="h-9 w-9 rounded-xl border border-rose-100 object-cover"
+                />
+              ) : (
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-rose-500 via-orange-500 to-amber-500 text-xs font-black tracking-[0.2em] text-white">
+                  {brandInitials(brandName)}
+                </span>
+              )}
+              <span className="truncate text-lg font-semibold tracking-[0.08em] md:text-xl">{brandName}</span>
             </Link>
 
             <nav className="ml-2 hidden items-center gap-1 md:flex">
