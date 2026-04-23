@@ -6,6 +6,7 @@ const {
   OfflineSaleItem,
 } = require("../models");
 const { majorToMinor, ensureMinorInt, minorToMajor } = require("../utils/money");
+const { consumeInventoryLotsFifo } = require("./inventoryLotService");
 
 class PosSaleError extends Error {
   constructor(status, message) {
@@ -138,6 +139,7 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
         product,
         productId: product.id,
         productName: product.name,
+        stockBefore: product.stock,
         quantity: line.quantity,
         priceAtSale,
         costAtPurchase,
@@ -156,17 +158,17 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
       { transaction }
     );
 
-    await OfflineSaleItem.bulkCreate(
-      saleLines.map((line) => ({
-        OfflineSaleId: sale.id,
-        ProductId: line.productId,
-        quantity: line.quantity,
-        priceAtSale: line.priceAtSale,
-      })),
-      { transaction }
-    );
-
     for (const line of saleLines) {
+      const saleItem = await OfflineSaleItem.create(
+        {
+          OfflineSaleId: sale.id,
+          ProductId: line.productId,
+          quantity: line.quantity,
+          priceAtSale: line.priceAtSale,
+        },
+        { transaction }
+      );
+
       const [updatedRows] = await Product.update(
         {
           stock: sequelize.literal(`stock - ${line.quantity}`),
@@ -185,6 +187,31 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
         throw new PosSaleError(
           409,
           `Stock changed while processing ${line.productName}. Please retry sale.`
+        );
+      }
+
+      try {
+        await consumeInventoryLotsFifo({
+          shopId,
+          product: line.product,
+          quantity: line.quantity,
+          reason: "POS_SALE",
+          referenceType: "OFFLINE_SALE",
+          referenceId: sale.id,
+          note: `Sold ${line.quantity} unit(s) via POS sale.`,
+          createdByUserId: userId,
+          productQuantityBefore: line.stockBefore,
+          offlineSaleItemId: saleItem.id,
+          metadata: {
+            productName: line.productName,
+            priceAtSaleMinor: line.priceAtSale,
+          },
+          transaction,
+        });
+      } catch (error) {
+        throw new PosSaleError(
+          409,
+          error?.message || `Unable to allocate FIFO lots for ${line.productName}.`
         );
       }
     }

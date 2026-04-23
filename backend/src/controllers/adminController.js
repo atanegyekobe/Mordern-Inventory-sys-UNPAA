@@ -1,4 +1,12 @@
-const { User, Product, Category, OfflineSale, OfflineSaleItem } = require("../models");
+const {
+  User,
+  Product,
+  Category,
+  OfflineSale,
+  OfflineSaleItem,
+  InventoryMovement,
+  InventoryLot,
+} = require("../models");
 const { Op } = require("sequelize");
 const { ensureMinorInt, majorToMinor, minorToMajor } = require("../utils/money");
 
@@ -681,9 +689,149 @@ const getLowStockAlerts = async (req, res, next) => {
   }
 };
 
+const listStockMovements = async (req, res, next) => {
+  try {
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+    const movementType = String(req.query.movementType || "").trim().toUpperCase();
+    const productId = String(req.query.productId || "").trim();
+
+    const where = { ShopId: req.shopId };
+
+    if (movementType && ["IN", "OUT", "ADJUSTMENT"].includes(movementType)) {
+      where.movementType = movementType;
+    }
+
+    if (productId) {
+      where.ProductId = productId;
+    }
+
+    const movements = await InventoryMovement.findAll({
+      where,
+      include: [
+        {
+          model: Product,
+          attributes: ["id", "name", "sku"],
+          required: false,
+        },
+        {
+          model: User,
+          as: "CreatedBy",
+          attributes: ["id", "name", "email"],
+          required: false,
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit,
+    });
+
+    return res.json({
+      movements: movements.map((movement) => ({
+        id: movement.id,
+        movementType: movement.movementType,
+        changeQty: movement.changeQty,
+        quantityAfter: movement.quantityAfter,
+        reason: movement.reason,
+        referenceType: movement.referenceType,
+        referenceId: movement.referenceId,
+        note: movement.note,
+        createdAt: movement.createdAt,
+        metadata: movement.metadata || {},
+        product: movement.Product
+          ? {
+              id: movement.Product.id,
+              name: movement.Product.name,
+              sku: movement.Product.sku || null,
+            }
+          : null,
+        createdBy: movement.CreatedBy
+          ? {
+              id: movement.CreatedBy.id,
+              name: movement.CreatedBy.name,
+              email: movement.CreatedBy.email,
+            }
+          : null,
+      })),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const listStockLots = async (req, res, next) => {
+  try {
+    const limit = Math.min(300, Math.max(1, Number(req.query.limit) || 120));
+    const status = String(req.query.status || "").trim().toLowerCase();
+    const productId = String(req.query.productId || "").trim();
+
+    const where = { ShopId: req.shopId };
+
+    if (["open", "consumed", "void"].includes(status)) {
+      where.status = status;
+    }
+
+    if (productId) {
+      where.ProductId = productId;
+    }
+
+    const lots = await InventoryLot.findAll({
+      where,
+      include: [
+        {
+          model: Product,
+          attributes: ["id", "name", "sku"],
+          required: false,
+        },
+        {
+          model: User,
+          as: "CreatedBy",
+          attributes: ["id", "name", "email"],
+          required: false,
+        },
+      ],
+      order: [["receivedAt", "ASC"], ["createdAt", "ASC"]],
+      limit,
+    });
+
+    return res.json({
+      lots: lots.map((lot) => ({
+        id: lot.id,
+        lotCode: lot.lotCode,
+        sourceType: lot.sourceType,
+        sourceRefId: lot.sourceRefId,
+        initialQty: lot.initialQty,
+        remainingQty: lot.remainingQty,
+        unitCostMinor: lot.unitCostMinor,
+        status: lot.status,
+        receivedAt: lot.receivedAt,
+        expiresAt: lot.expiresAt,
+        note: lot.note,
+        metadata: lot.metadata || {},
+        product: lot.Product
+          ? {
+              id: lot.Product.id,
+              name: lot.Product.name,
+              sku: lot.Product.sku || null,
+            }
+          : null,
+        createdBy: lot.CreatedBy
+          ? {
+              id: lot.CreatedBy.id,
+              name: lot.CreatedBy.name,
+              email: lot.CreatedBy.email,
+            }
+          : null,
+      })),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   summary,
   analytics,
   salesManagement,
   getLowStockAlerts,
+  listStockMovements,
+  listStockLots,
 };

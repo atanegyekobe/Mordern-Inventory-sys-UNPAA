@@ -3,6 +3,10 @@ const { Op } = require("sequelize");
 const { rejectCrossShopAccess } = require("../middleware/shopContext");
 const { majorToMinor, minorToMajor, ensureMinorInt } = require("../utils/money");
 const {
+  createInventoryLot,
+  consumeInventoryLotsFifo,
+} = require("../services/inventoryLotService");
+const {
   getPublicProducts,
   getPublicProductById,
   getPublicProductBySlug,
@@ -254,6 +258,19 @@ const create = async (req, res, next) => {
       CategoryId: categoryId,
     });
 
+    if (stockValue > 0) {
+      await createInventoryLot({
+        shopId: req.shopId,
+        productId: product.id,
+        quantity: stockValue,
+        sourceType: "INITIAL_STOCK",
+        sourceRefId: product.id,
+        note: "Initial stock recorded during product creation.",
+        createdByUserId: req.user?.id,
+        productQuantityBefore: 0,
+      });
+    }
+
     return res.status(201).json({ product, warnings: warnings.length > 0 ? warnings : null });
   } catch (error) {
     return next(error);
@@ -363,7 +380,54 @@ const update = async (req, res, next) => {
       updates.imageUrl = `/uploads/${req.file.filename}`;
     }
 
-    await product.update(updates);
+    await sequelize.transaction(async (transaction) => {
+      const lockedProduct = await Product.findOne({
+        where: { id: product.id, ShopId: req.shopId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!lockedProduct) {
+        throw new Error("Product not found while processing update transaction.");
+      }
+
+      const stockBefore = ensureMinorInt(lockedProduct.stock);
+      await lockedProduct.update(updates, { transaction });
+
+      if (updates.stock !== undefined) {
+        const stockAfter = ensureMinorInt(updates.stock);
+        const delta = stockAfter - stockBefore;
+
+        if (delta > 0) {
+          await createInventoryLot({
+            shopId: req.shopId,
+            productId: lockedProduct.id,
+            quantity: delta,
+            sourceType: "MANUAL_STOCK_SET",
+            sourceRefId: lockedProduct.id,
+            note: `Stock manually set from ${stockBefore} to ${stockAfter}.`,
+            createdByUserId: req.user?.id,
+            productQuantityBefore: stockBefore,
+            transaction,
+          });
+        }
+
+        if (delta < 0) {
+          await consumeInventoryLotsFifo({
+            shopId: req.shopId,
+            product: lockedProduct,
+            quantity: Math.abs(delta),
+            reason: "MANUAL_STOCK_SET",
+            referenceType: "PRODUCT_UPDATE",
+            referenceId: lockedProduct.id,
+            note: `Stock manually set from ${stockBefore} to ${stockAfter}.`,
+            createdByUserId: req.user?.id,
+            productQuantityBefore: stockBefore,
+            transaction,
+          });
+        }
+      }
+    });
     
     // Reload product to ensure fresh data is returned
     const updatedProduct = await Product.findOne({
@@ -474,6 +538,7 @@ const bulkUpdateCategory = async (req, res, next) => {
 const bulkUpdateStock = async (req, res, next) => {
   try {
     const { productIds, operation, value } = req.body;
+    const batchRefId = `bulk-stock:${Date.now()}`;
     
     if (!productIds || productIds.length === 0) {
       return res.status(400).json({ message: "At least one product ID is required." });
@@ -504,10 +569,25 @@ const bulkUpdateStock = async (req, res, next) => {
 
       if (operation === "add") {
         for (const product of products) {
+          const stockBefore = ensureMinorInt(product.stock);
+          const stockAfter = stockBefore + numericValue;
+
           await Product.update(
             { stock: sequelize.literal(`stock + ${numericValue}`) },
             { where: { id: product.id, ShopId: req.shopId }, transaction }
           );
+
+          await createInventoryLot({
+            shopId: req.shopId,
+            productId: product.id,
+            quantity: numericValue,
+            sourceType: "BULK_STOCK_ADD",
+            sourceRefId: batchRefId,
+            note: `Bulk stock add of ${numericValue} unit(s).`,
+            createdByUserId: req.user?.id,
+            productQuantityBefore: stockBefore,
+            transaction,
+          });
         }
       } else if (operation === "subtract") {
         const insufficient = products.filter((product) => product.stock < numericValue);
@@ -529,6 +609,9 @@ const bulkUpdateStock = async (req, res, next) => {
         }
 
         for (const product of products) {
+          const stockBefore = ensureMinorInt(product.stock);
+          const stockAfter = stockBefore - numericValue;
+
           const [updatedCount] = await Product.update(
             { stock: sequelize.literal(`stock - ${numericValue}`) },
             {
@@ -544,13 +627,59 @@ const bulkUpdateStock = async (req, res, next) => {
           if (updatedCount !== 1) {
             throw new Error(`Atomic stock decrement failed for product ${product.id}.`);
           }
+
+          await consumeInventoryLotsFifo({
+            shopId: req.shopId,
+            product,
+            quantity: numericValue,
+            reason: "BULK_STOCK_SUBTRACT",
+            referenceType: "BULK_STOCK",
+            referenceId: batchRefId,
+            note: `Bulk stock subtract of ${numericValue} unit(s).`,
+            createdByUserId: req.user?.id,
+            productQuantityBefore: stockBefore,
+            transaction,
+          });
         }
       } else if (operation === "set") {
         for (const product of products) {
+          const stockBefore = ensureMinorInt(product.stock);
+          const stockAfter = numericValue;
+
           await Product.update(
             { stock: numericValue },
             { where: { id: product.id, ShopId: req.shopId }, transaction }
           );
+
+          const delta = stockAfter - stockBefore;
+          if (delta > 0) {
+            await createInventoryLot({
+              shopId: req.shopId,
+              productId: product.id,
+              quantity: delta,
+              sourceType: "BULK_STOCK_SET",
+              sourceRefId: batchRefId,
+              note: `Bulk stock set from ${stockBefore} to ${stockAfter}.`,
+              createdByUserId: req.user?.id,
+              productQuantityBefore: stockBefore,
+              transaction,
+            });
+          }
+
+          if (delta < 0) {
+            await consumeInventoryLotsFifo({
+              shopId: req.shopId,
+              product,
+              quantity: Math.abs(delta),
+              reason: "BULK_STOCK_SET",
+              referenceType: "BULK_STOCK",
+              referenceId: batchRefId,
+              note: `Bulk stock set from ${stockBefore} to ${stockAfter}.`,
+              createdByUserId: req.user?.id,
+              productQuantityBefore: stockBefore,
+              transaction,
+            });
+          }
         }
         return { updated: products.length };
       } else {

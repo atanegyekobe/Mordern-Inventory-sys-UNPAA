@@ -135,6 +135,16 @@ type RecentSaleDetails = {
     priceAtSale: string | number;
     lineTotalMinor: number;
     lineTotal: string | number;
+    lotAllocations?: Array<{
+      id: string;
+      quantity: number;
+      unitCostMinorAtAllocation: number | null;
+      lot: {
+        id: string;
+        lotCode: string;
+        sourceType: string;
+      } | null;
+    }>;
   }>;
 };
 
@@ -589,7 +599,7 @@ export default function PosPage() {
     <AdminRoute>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fef3c7_0%,transparent_26%),radial-gradient(circle_at_top_right,#cffafe_0%,transparent_24%),linear-gradient(180deg,#fafaf9_0%,#f8fafc_100%)]">
         <NavBar />
-        <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-350 px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-8 overflow-x-hidden">
         <section className="relative overflow-hidden rounded-3xl border border-black/10 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.18),transparent_35%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_30%),linear-gradient(180deg,#ffffff_0%,#fafaf9_100%)] p-6">
           <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-amber-100/40 blur-3xl" />
@@ -1179,6 +1189,25 @@ export default function PosPage() {
                             <tr key={item.id}>
                               <td className="max-w-55 px-4 py-3 font-medium text-black">
                                 <span className="block truncate" title={item.productName}>{item.productName}</span>
+                                {item.lotAllocations && item.lotAllocations.length > 0 ? (
+                                  <div className="mt-2 space-y-1 rounded-xl border border-cyan-100 bg-cyan-50/50 px-2.5 py-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan-800/80">
+                                      Lot usage (FIFO)
+                                    </p>
+                                    {item.lotAllocations.map((allocation) => (
+                                      <p key={allocation.id} className="text-[11px] text-cyan-900/85">
+                                        <span className="font-semibold">
+                                          {allocation.lot?.lotCode || "Unknown lot"}
+                                        </span>
+                                        {" "}
+                                        used {allocation.quantity}
+                                        {allocation.lot?.sourceType ? ` (${allocation.lot.sourceType})` : ""}
+                                      </p>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="mt-2 text-[11px] text-black/45">No lot allocation data.</p>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-black/65">{item.quantity}</td>
                               <td className="px-4 py-3 text-black/65">{formatMoney(item.priceAtSale)}</td>

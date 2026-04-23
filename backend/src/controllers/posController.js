@@ -1,5 +1,13 @@
 const { Op } = require("sequelize");
-const { Product, Category, OfflineSale, OfflineSaleItem, User } = require("../models");
+const {
+  Product,
+  Category,
+  OfflineSale,
+  OfflineSaleItem,
+  OfflineSaleItemLotAllocation,
+  InventoryLot,
+  User,
+} = require("../models");
 const { createPosSale, PosSaleError } = require("../services/posSaleService");
 const { minorToMajor } = require("../utils/money");
 
@@ -171,6 +179,18 @@ const getRecentSaleDetails = async (req, res, next) => {
               attributes: ["id", "name", "imageUrl"],
               required: false,
             },
+            {
+              model: OfflineSaleItemLotAllocation,
+              attributes: ["id", "quantity", "unitCostMinorAtAllocation", "metadata"],
+              include: [
+                {
+                  model: InventoryLot,
+                  attributes: ["id", "lotCode", "sourceType"],
+                  required: false,
+                },
+              ],
+              required: false,
+            },
           ],
         },
       ],
@@ -192,6 +212,21 @@ const getRecentSaleDetails = async (req, res, next) => {
         priceAtSale: minorToMajor(item.priceAtSale),
         lineTotalMinor,
         lineTotal: minorToMajor(lineTotalMinor),
+        lotAllocations: (item.OfflineSaleItemLotAllocations || []).map((allocation) => ({
+          id: allocation.id,
+          quantity: Number(allocation.quantity || 0),
+          unitCostMinorAtAllocation:
+            allocation.unitCostMinorAtAllocation == null
+              ? null
+              : Number(allocation.unitCostMinorAtAllocation),
+          lot: allocation.InventoryLot
+            ? {
+                id: allocation.InventoryLot.id,
+                lotCode: allocation.InventoryLot.lotCode,
+                sourceType: allocation.InventoryLot.sourceType,
+              }
+            : null,
+        })),
       };
     });
 

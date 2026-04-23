@@ -10,6 +10,9 @@ const createMessage = require("./Message");
 const createMessageReply = require("./MessageReply");
 const createOfflineSale = require("./OfflineSale");
 const createOfflineSaleItem = require("./OfflineSaleItem");
+const createInventoryMovement = require("./InventoryMovement");
+const createInventoryLot = require("./InventoryLot");
+const createOfflineSaleItemLotAllocation = require("./OfflineSaleItemLotAllocation");
 
 const User = createUser(sequelize);
 const Shop = createShop(sequelize);
@@ -22,6 +25,9 @@ const Message = createMessage(sequelize);
 const MessageReply = createMessageReply(sequelize);
 const OfflineSale = createOfflineSale(sequelize);
 const OfflineSaleItem = createOfflineSaleItem(sequelize);
+const InventoryMovement = createInventoryMovement(sequelize);
+const InventoryLot = createInventoryLot(sequelize);
+const OfflineSaleItemLotAllocation = createOfflineSaleItemLotAllocation(sequelize);
 
 User.hasMany(Shop, { foreignKey: "ownerId", as: "OwnedShops" });
 Shop.belongsTo(User, { foreignKey: "ownerId", as: "Owner" });
@@ -67,6 +73,54 @@ OfflineSaleItem.belongsTo(OfflineSale);
 Product.hasMany(OfflineSaleItem, { foreignKey: { allowNull: false } });
 OfflineSaleItem.belongsTo(Product);
 
+Shop.hasMany(InventoryMovement, { foreignKey: { allowNull: false } });
+InventoryMovement.belongsTo(Shop);
+
+Product.hasMany(InventoryMovement, { foreignKey: { allowNull: false } });
+InventoryMovement.belongsTo(Product);
+
+ProductVariant.hasMany(InventoryMovement, { foreignKey: { allowNull: true } });
+InventoryMovement.belongsTo(ProductVariant);
+
+User.hasMany(InventoryMovement, {
+  foreignKey: "CreatedByUserId",
+  as: "InventoryMovementsCreated",
+});
+InventoryMovement.belongsTo(User, {
+  foreignKey: "CreatedByUserId",
+  as: "CreatedBy",
+});
+
+Shop.hasMany(InventoryLot, { foreignKey: { allowNull: false } });
+InventoryLot.belongsTo(Shop);
+
+Product.hasMany(InventoryLot, { foreignKey: { allowNull: false } });
+InventoryLot.belongsTo(Product);
+
+ProductVariant.hasMany(InventoryLot, { foreignKey: { allowNull: true } });
+InventoryLot.belongsTo(ProductVariant);
+
+User.hasMany(InventoryLot, {
+  foreignKey: "CreatedByUserId",
+  as: "InventoryLotsCreated",
+});
+InventoryLot.belongsTo(User, {
+  foreignKey: "CreatedByUserId",
+  as: "CreatedBy",
+});
+
+OfflineSaleItem.hasMany(OfflineSaleItemLotAllocation, {
+  foreignKey: { allowNull: false },
+  onDelete: "CASCADE",
+});
+OfflineSaleItemLotAllocation.belongsTo(OfflineSaleItem);
+
+InventoryLot.hasMany(OfflineSaleItemLotAllocation, {
+  foreignKey: { allowNull: false },
+  onDelete: "RESTRICT",
+});
+OfflineSaleItemLotAllocation.belongsTo(InventoryLot);
+
 Shop.hasMany(Message, { foreignKey: { allowNull: false } });
 Message.belongsTo(Shop);
 
@@ -111,4 +165,7 @@ module.exports = {
   MessageReply,
   OfflineSale,
   OfflineSaleItem,
+  InventoryMovement,
+  InventoryLot,
+  OfflineSaleItemLotAllocation,
 };

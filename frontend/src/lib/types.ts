@@ -39,6 +39,54 @@ export type Product = {
   ProductVariants?: ProductVariant[];
 };
 
+export type InventoryMovement = {
+  id: string;
+  movementType: "IN" | "OUT" | "ADJUSTMENT";
+  changeQty: number;
+  quantityAfter: number;
+  reason: string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  note?: string | null;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+  product: {
+    id: string;
+    name: string;
+    sku?: string | null;
+  } | null;
+  createdBy: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+};
+
+export type InventoryLot = {
+  id: string;
+  lotCode: string;
+  sourceType: string;
+  sourceRefId?: string | null;
+  initialQty: number;
+  remainingQty: number;
+  unitCostMinor?: number | null;
+  status: "open" | "consumed" | "void";
+  receivedAt: string;
+  expiresAt?: string | null;
+  note?: string | null;
+  metadata?: Record<string, unknown>;
+  product: {
+    id: string;
+    name: string;
+    sku?: string | null;
+  } | null;
+  createdBy: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+};
+
 export type OrderItem = {
   id: string;
   OrderId: string;
