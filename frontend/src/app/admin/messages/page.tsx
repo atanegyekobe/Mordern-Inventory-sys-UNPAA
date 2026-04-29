@@ -370,7 +370,7 @@ export default function MessagesPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/admin/customers/${message.User.id}`);
+                      router.push(`/admin`);
                     }}
                     className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-full border border-black/15 bg-white px-3 py-1.5 text-xs font-semibold text-black/70 transition hover:bg-black/5"
                     title="View customer profile"
@@ -426,7 +426,7 @@ export default function MessagesPage() {
                         From: {selectedMessage.User.name} ({selectedMessage.User.email})
                       </p>
                       <button
-                        onClick={() => router.push(`/admin/customers/${selectedMessage.User.id}`)}
+                        onClick={() => router.push(`/admin`)}
                         className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
                         title="View customer profile"
                       >

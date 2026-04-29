@@ -1,2 +1,3 @@
-SELECT * FROM offline_sales
+SELECT * FROM users
+
  

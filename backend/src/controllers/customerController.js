@@ -6,16 +6,32 @@ const hasShopActivity = async (userId, shopId) => {
   return messageCount > 0;
 };
 
+const getShopCustomerIds = async (shopId) => {
+  const rows = await Message.findAll({
+    where: { ShopId: shopId },
+    attributes: ["UserId"],
+    group: ["UserId"],
+    raw: true,
+  });
+
+  return rows.map((row) => row.UserId).filter(Boolean);
+};
+
 exports.getAllCustomers = async (req, res) => {
   try {
     const { search, role, sortBy = "createdAt", order = "DESC" } = req.query;
-    const where = {};
+    const customerIds = await getShopCustomerIds(req.shopId);
+    const where = {
+      id: customerIds,
+      role: role || "customer",
+    };
+
+    if (customerIds.length === 0) {
+      return res.json([]);
+    }
 
     if (search) {
       where[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }, { email: { [Op.iLike]: `%${search}%` } }];
-    }
-    if (role) {
-      where.role = role;
     }
 
     const customers = await User.findAll({
