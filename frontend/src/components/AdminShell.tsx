@@ -22,7 +22,6 @@ const links = [
   { href: "/admin/import", label: "CSV Import" },
   { href: "/admin/team", label: "Manage Staff" },
   { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/messages", label: "Messages" },
 ];
 
 const ownerOnlyHrefs = new Set([

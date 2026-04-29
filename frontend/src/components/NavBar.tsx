@@ -5,9 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/useToast";
-import { useNotifications } from "@/lib/notification-alert-context";
-import NotificationBadge from "@/components/NotificationBadge";
-import NotificationBell from "@/components/NotificationBell";
 import { toAssetUrl } from "@/lib/assets";
 
 export default function NavBar() {
@@ -15,7 +12,6 @@ export default function NavBar() {
   const pathname = usePathname();
   const { user, shops, activeShopId, logout } = useAuth();
   const toast = useToast();
-  const { unreadMessages } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const firstName = user?.name?.split(" ")[0] ?? "Guest";
@@ -96,25 +92,14 @@ export default function NavBar() {
               {user && (
                 <>
                   <Link href="/account/profile" className={navLinkClass("/account/profile")}>Profile</Link>
-                  <Link href="/account/support" className={navLinkClass("/account/support")}>
-                    Messages
-                    <NotificationBadge count={unreadMessages} size="sm" />
-                  </Link>
                 </>
               )}
-              {!user && <Link href="/support" className={navLinkClass("/support")}>Talk 2 Us</Link>}
               {hasShopAccess && (
                 <Link href="/admin/dashboard" className={navLinkClass("/admin")}>Manage Store</Link>
               )}
             </nav>
 
             <div className="ml-auto flex items-center gap-2">
-              {user && (
-                <>
-                  <NotificationBell />
-                </>
-              )}
-
               {user ? (
                 <>
                   <div className="hidden items-center gap-1 rounded-full bg-black/4 px-3 py-2 text-sm md:flex">
@@ -176,10 +161,8 @@ export default function NavBar() {
                 {user && (
                   <>
                     <Link href="/account/profile" className={navLinkClass("/account/profile")} onClick={() => setIsMobileMenuOpen(false)}>Profile</Link>
-                    <Link href="/account/support" className={navLinkClass("/account/support")} onClick={() => setIsMobileMenuOpen(false)}>Messages</Link>
                   </>
                 )}
-                {!user && <Link href="/support" className={navLinkClass("/support")} onClick={() => setIsMobileMenuOpen(false)}>Support</Link>}
                 {hasShopAccess && <Link href="/admin/dashboard" className={navLinkClass("/admin")} onClick={() => setIsMobileMenuOpen(false)}>Manage Store</Link>}
               </nav>
 

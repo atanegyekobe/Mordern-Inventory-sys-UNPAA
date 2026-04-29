@@ -6,29 +6,26 @@ const hasShopActivity = async (userId, shopId) => {
   return messageCount > 0;
 };
 
-const getShopCustomerIds = async (shopId) => {
-  const rows = await Message.findAll({
-    where: { ShopId: shopId },
-    attributes: ["UserId"],
-    group: ["UserId"],
-    raw: true,
-  });
+const isUserMemberOfShop = async (userId, shopId) => {
+  const { UserShop } = require("../models");
+  const membership = await UserShop.findOne({ where: { UserId: userId, ShopId: shopId } });
+  return Boolean(membership);
+};
 
-  return rows.map((row) => row.UserId).filter(Boolean);
+const getShopMemberIds = async (shopId) => {
+  const { UserShop } = require("../models");
+  const rows = await UserShop.findAll({ where: { ShopId: shopId }, attributes: ["UserId"], raw: true });
+  return rows.map((r) => r.UserId).filter(Boolean);
 };
 
 exports.getAllCustomers = async (req, res) => {
   try {
     const { search, role, sortBy = "createdAt", order = "DESC" } = req.query;
-    const customerIds = await getShopCustomerIds(req.shopId);
-    const where = {
-      id: customerIds,
-      role: role || "customer",
-    };
+    const customerIds = await getShopMemberIds(req.shopId);
+    if (customerIds.length === 0) return res.json([]);
 
-    if (customerIds.length === 0) {
-      return res.json([]);
-    }
+    const where = { id: customerIds };
+    if (role) where.role = role;
 
     if (search) {
       where[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }, { email: { [Op.iLike]: `%${search}%` } }];
@@ -69,7 +66,7 @@ exports.getCustomerById = async (req, res) => {
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    const inCurrentShop = await hasShopActivity(customer.id, req.shopId);
+    const inCurrentShop = await isUserMemberOfShop(customer.id, req.shopId);
     if (!inCurrentShop) {
       return res.status(404).json({ error: "Customer not found" });
     }
@@ -104,7 +101,7 @@ exports.updateCustomer = async (req, res) => {
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    const inCurrentShop = await hasShopActivity(customer.id, req.shopId);
+    const inCurrentShop = await isUserMemberOfShop(customer.id, req.shopId);
     if (!inCurrentShop) {
       return res.status(404).json({ error: "Customer not found" });
     }
@@ -131,7 +128,7 @@ exports.deleteCustomer = async (req, res) => {
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    const inCurrentShop = await hasShopActivity(customer.id, req.shopId);
+    const inCurrentShop = await isUserMemberOfShop(customer.id, req.shopId);
     if (!inCurrentShop) {
       return res.status(404).json({ error: "Customer not found" });
     }

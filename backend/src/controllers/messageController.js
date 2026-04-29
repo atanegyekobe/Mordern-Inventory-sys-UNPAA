@@ -1,4 +1,4 @@
-const { Message, MessageReply, User } = require("../models");
+const { Message, MessageReply, User, UserShop } = require("../models");
 const { Op } = require("sequelize");
 
 // Get all messages (different views for admin vs customer)
@@ -94,58 +94,47 @@ exports.getMessageById = async (req, res) => {
   }
 };
 
-// Create message from admin to customer
+// (Deprecated) admin-specific create — delegates to unified createMessage
 exports.createAdminMessage = async (req, res) => {
+  return exports.createMessage(req, res);
+};
+
+// Unified create message endpoint
+exports.createMessage = async (req, res) => {
   try {
     const { userId, subject, content, priority } = req.body;
 
-    if (!userId || !subject || !content) {
-      return res.status(400).json({
-        error: "userId, subject, and content are required",
+    // If admin provided a target userId, treat this as admin->customer send
+    if (req.user.role === "admin" && userId) {
+      if (!subject || !content) {
+        return res.status(400).json({ error: "subject and content are required" });
+      }
+
+      const targetUser = await User.findByPk(userId);
+      if (!targetUser) return res.status(404).json({ error: "User not found" });
+
+      const membership = await UserShop.findOne({ where: { UserId: userId, ShopId: req.shopId } });
+      if (!membership) return res.status(404).json({ error: "User not found in this shop" });
+
+      const message = await Message.create({
+        ShopId: req.shopId,
+        subject,
+        content,
+        priority: priority || "medium",
+        status: "open",
+        UserId: userId,
       });
+
+      const createdMessage = await Message.findByPk(message.id, {
+        include: [{ model: User, attributes: ["id", "name", "email"] }],
+      });
+
+      return res.status(201).json(createdMessage);
     }
 
-    // Verify target user exists
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const message = await Message.create({
-      ShopId: req.shopId,
-      subject,
-      content,
-      priority: priority || "medium",
-      status: "open",
-      UserId: userId,
-    });
-
-    // Fetch the created message with user info
-    const createdMessage = await Message.findByPk(message.id, {
-      include: [
-        {
-          model: User,
-          attributes: ["id", "name", "email"],
-        },
-      ],
-    });
-
-    res.status(201).json(createdMessage);
-  } catch (error) {
-    console.error("Error creating admin message:", error);
-    res.status(500).json({ error: "Failed to create message" });
-  }
-};
-
-// Create new message (customer)
-exports.createMessage = async (req, res) => {
-  try {
-    const { subject, content, priority } = req.body;
-
+    // Otherwise create a message on behalf of the authenticated user
     if (!subject || !content) {
-      return res
-        .status(400)
-        .json({ error: "Subject and content are required" });
+      return res.status(400).json({ error: "Subject and content are required" });
     }
 
     const message = await Message.create({
@@ -157,14 +146,8 @@ exports.createMessage = async (req, res) => {
       UserId: req.user.id,
     });
 
-    // Fetch the created message with user info
     const createdMessage = await Message.findByPk(message.id, {
-      include: [
-        {
-          model: User,
-          attributes: ["id", "name", "email"],
-        },
-      ],
+      include: [{ model: User, attributes: ["id", "name", "email"] }],
     });
 
     res.status(201).json(createdMessage);
