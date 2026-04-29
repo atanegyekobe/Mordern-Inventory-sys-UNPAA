@@ -6,8 +6,6 @@ const createCategory = require("./Category");
 const createProduct = require("./Product");
 const createProductVariant = require("./ProductVariant");
 const createCategoryVariantTemplate = require("./CategoryVariantTemplate");
-const createMessage = require("./Message");
-const createMessageReply = require("./MessageReply");
 const createOfflineSale = require("./OfflineSale");
 const createOfflineSaleItem = require("./OfflineSaleItem");
 const createInventoryMovement = require("./InventoryMovement");
@@ -21,8 +19,6 @@ const Category = createCategory(sequelize);
 const Product = createProduct(sequelize);
 const ProductVariant = createProductVariant(sequelize);
 const CategoryVariantTemplate = createCategoryVariantTemplate(sequelize);
-const Message = createMessage(sequelize);
-const MessageReply = createMessageReply(sequelize);
 const OfflineSale = createOfflineSale(sequelize);
 const OfflineSaleItem = createOfflineSaleItem(sequelize);
 const InventoryMovement = createInventoryMovement(sequelize);
@@ -121,8 +117,6 @@ InventoryLot.hasMany(OfflineSaleItemLotAllocation, {
 });
 OfflineSaleItemLotAllocation.belongsTo(InventoryLot);
 
-Shop.hasMany(Message, { foreignKey: { allowNull: false } });
-Message.belongsTo(Shop);
 
 Category.hasMany(Product, { foreignKey: { allowNull: false } });
 Product.belongsTo(Category);
@@ -146,11 +140,6 @@ Product.hasMany(ProductVariant, {
 });
 ProductVariant.belongsTo(Product);
 
-User.hasMany(Message);
-Message.belongsTo(User);
-Message.hasMany(MessageReply, { onDelete: "CASCADE" });
-MessageReply.belongsTo(Message);
-MessageReply.belongsTo(User);
 
 module.exports = {
   sequelize,
@@ -161,8 +150,6 @@ module.exports = {
   Product,
   ProductVariant,
   CategoryVariantTemplate,
-  Message,
-  MessageReply,
   OfflineSale,
   OfflineSaleItem,
   InventoryMovement,

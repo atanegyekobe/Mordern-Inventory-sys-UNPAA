@@ -1,10 +1,5 @@
-const { User, Message } = require("../models");
+const { User } = require("../models");
 const { Op } = require("sequelize");
-
-const hasShopActivity = async (userId, shopId) => {
-  const messageCount = await Message.count({ where: { UserId: userId, ShopId: shopId } });
-  return messageCount > 0;
-};
 
 const isUserMemberOfShop = async (userId, shopId) => {
   const { UserShop } = require("../models");
@@ -39,13 +34,11 @@ exports.getAllCustomers = async (req, res) => {
 
     const customersWithStats = await Promise.all(
       customers.map(async (customer) => {
-        const messageCount = await Message.count({ where: { UserId: customer.id, ShopId: req.shopId } });
         return {
           ...customer.toJSON(),
           stats: {
             orderCount: 0,
             totalSpent: 0,
-            messageCount,
             lastOrderDate: null,
           },
         };
@@ -71,21 +64,13 @@ exports.getCustomerById = async (req, res) => {
       return res.status(404).json({ error: "Customer not found" });
     }
 
-    const messages = await Message.findAll({
-      where: { UserId: customer.id, ShopId: req.shopId },
-      order: [["createdAt", "DESC"]],
-      limit: 10,
-    });
-
     return res.json({
       customer: customer.toJSON(),
       orders: [],
-      messages,
       stats: {
         orderCount: 0,
         totalSpent: 0,
         avgOrderValue: 0,
-        messageCount: messages.length,
       },
     });
   } catch (error) {
