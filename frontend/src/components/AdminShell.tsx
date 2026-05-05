@@ -14,14 +14,16 @@ type AdminShellProps = {
 
 const links = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/analytics", label: "Inventory Insights" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/sales", label: "Sales" },
-  { href: "/admin/stock-ledger", label: "Stock Ledger" },
   { href: "/admin/pos", label: "POS" },
-  { href: "/admin/products", label: "Inventory" },
-  { href: "/admin/import", label: "CSV Import" },
-  { href: "/admin/team", label: "Manage Staff" },
+  { href: "/admin/products", label: "Products" },
+  { href: "/admin/stock-ledger", label: "Stock Ledger" },
+  { href: "/admin/stock-requests", label: "Stock Requests" },
+  { href: "/admin/stock-requests/request", label: "Request Stock" },
   { href: "/admin/categories", label: "Categories" },
+  { href: "/admin/team", label: "Team" },
+  { href: "/admin/import", label: "Import CSV" },
 ];
 
 const ownerOnlyHrefs = new Set([
@@ -30,6 +32,10 @@ const ownerOnlyHrefs = new Set([
   "/admin/team",
   "/admin/categories",
   "/admin/import",
+]);
+
+const staffOnlyHrefs = new Set([
+  "/admin/stock-requests/request",
 ]);
 
 export default function AdminShell({ title, children, ownerOnly = false }: AdminShellProps) {
@@ -43,10 +49,15 @@ export default function AdminShell({ title, children, ownerOnly = false }: Admin
     : null;
 
   const isOwner = Boolean(user && (user.role === "admin" || activeShop?.role === "OWNER"));
+  const isStaff = Boolean(user?.role !== "admin" && activeShop?.role === "STAFF");
 
-  const visibleLinks = isOwner
+  const baseLinks = isOwner
     ? links
     : links.filter((link) => !ownerOnlyHrefs.has(link.href));
+
+  const visibleLinks = isStaff
+    ? baseLinks
+    : baseLinks.filter((link) => !staffOnlyHrefs.has(link.href));
 
   const isActiveLink = (href: string) => {
     if (href === "/admin") {

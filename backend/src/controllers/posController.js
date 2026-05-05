@@ -7,6 +7,7 @@ const {
   OfflineSaleItemLotAllocation,
   InventoryLot,
   User,
+  ProductVariant,
 } = require("../models");
 const { createPosSale, PosSaleError } = require("../services/posSaleService");
 const { minorToMajor } = require("../utils/money");
@@ -22,7 +23,10 @@ const listProducts = async (req, res, next) => {
         status: "active",
       },
       attributes: ["id", "name", "price", "stock", "imageUrl", "CategoryId"],
-      include: [{ model: Category, attributes: ["id", "name"], required: false }],
+      include: [
+        { model: Category, attributes: ["id", "name"], required: false },
+        { model: ProductVariant, attributes: ["id", "sku", "price", "stock", "attributes", "imageUrl", "status"], required: false },
+      ],
       order: [["name", "ASC"]],
     });
 
@@ -40,6 +44,16 @@ const listProducts = async (req, res, next) => {
               name: product.Category.name,
             }
           : null,
+        hasVariants: Array.isArray(product.ProductVariants) && product.ProductVariants.length > 0,
+        variants: (product.ProductVariants || []).map((v) => ({
+          id: v.id,
+          sku: v.sku,
+          price: v.price,
+          stock: v.stock,
+          attributes: v.attributes,
+          image: v.imageUrl,
+          status: v.status,
+        })),
       })),
     });
   } catch (error) {
@@ -64,7 +78,10 @@ const searchProducts = async (req, res, next) => {
         ],
       },
       attributes: ["id", "name", "price", "stock", "imageUrl", "CategoryId"],
-      include: [{ model: Category, attributes: ["id", "name"], required: false }],
+      include: [
+        { model: Category, attributes: ["id", "name"], required: false },
+        { model: ProductVariant, attributes: ["id", "sku", "price", "stock", "attributes", "imageUrl", "status"], required: false },
+      ],
       order: [["name", "ASC"]],
       limit: POS_SEARCH_LIMIT,
     });
@@ -83,6 +100,16 @@ const searchProducts = async (req, res, next) => {
               name: product.Category.name,
             }
           : null,
+        hasVariants: Array.isArray(product.ProductVariants) && product.ProductVariants.length > 0,
+        variants: (product.ProductVariants || []).map((v) => ({
+          id: v.id,
+          sku: v.sku,
+          price: v.price,
+          stock: v.stock,
+          attributes: v.attributes,
+          image: v.imageUrl,
+          status: v.status,
+        })),
       })),
     });
   } catch (error) {

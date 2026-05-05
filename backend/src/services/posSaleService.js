@@ -5,6 +5,7 @@ const {
   OfflineSale,
   OfflineSaleItem,
 } = require("../models");
+const { ProductVariant } = require("../models");
 const { majorToMinor, ensureMinorInt, minorToMajor } = require("../utils/money");
 const { consumeInventoryLotsFifo } = require("./inventoryLotService");
 
@@ -25,23 +26,27 @@ const normalizeItems = (items) => {
 
   for (const item of items) {
     const productId = String(item?.productId || "").trim();
+    const variantId = String(item?.variantId || "").trim();
     const quantity = Number(item?.quantity);
 
-    if (!productId) {
-      throw new PosSaleError(400, "Each item must include a productId.");
+    if (!productId && !variantId) {
+      throw new PosSaleError(400, "Each item must include a productId or variantId.");
     }
 
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new PosSaleError(400, "Each item quantity must be a positive integer.");
     }
 
-    aggregate.set(productId, (aggregate.get(productId) || 0) + quantity);
+    const key = variantId ? `v:${variantId}` : `p:${productId}`;
+    aggregate.set(key, (aggregate.get(key) || 0) + quantity);
   }
 
-  return Array.from(aggregate.entries()).map(([productId, quantity]) => ({
-    productId,
-    quantity,
-  }));
+  return Array.from(aggregate.entries()).map(([key, quantity]) => {
+    if (key.startsWith("v:")) {
+      return { variantId: key.slice(2), quantity };
+    }
+    return { productId: key.slice(2), quantity };
+  });
 };
 
 const normalizeSaleNote = (note) => {
@@ -109,37 +114,65 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
     let totalAmount = 0;
 
     for (const line of normalizedItems) {
-      const product = await Product.findOne({
-        where: {
-          id: line.productId,
-          ShopId: shopId,
-          status: "active",
-        },
-        transaction,
-        lock: transaction.LOCK.UPDATE,
-      });
+      let product = null;
+      let variant = null;
 
-      if (!product) {
-        throw new PosSaleError(404, `Product ${line.productId} not found for this shop.`);
+      if (line.variantId) {
+        variant = await ProductVariant.findOne({
+          where: { id: line.variantId, ShopId: shopId, status: "active" },
+          include: [{ model: Product }],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!variant || !variant.Product) {
+          throw new PosSaleError(404, `Variant ${line.variantId} not found for this shop.`);
+        }
+
+        product = variant.Product;
+
+        if (variant.stock < line.quantity) {
+          throw new PosSaleError(
+            409,
+            `Insufficient stock for ${product.name} (${variant.sku || variant.id}). Available: ${variant.stock}, requested: ${line.quantity}.`
+          );
+        }
+      } else {
+        product = await Product.findOne({
+          where: {
+            id: line.productId,
+            ShopId: shopId,
+            status: "active",
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
+
+        if (!product) {
+          throw new PosSaleError(404, `Product ${line.productId} not found for this shop.`);
+        }
+
+        if (product.stock < line.quantity) {
+          throw new PosSaleError(
+            409,
+            `Insufficient stock for ${product.name}. Available: ${product.stock}, requested: ${line.quantity}.`
+          );
+        }
       }
 
-      if (product.stock < line.quantity) {
-        throw new PosSaleError(
-          409,
-          `Insufficient stock for ${product.name}. Available: ${product.stock}, requested: ${line.quantity}.`
-        );
-      }
-
-      const priceAtSale = ensureMinorInt(product.priceMinor || majorToMinor(product.price || 0));
+      const priceAtSale = ensureMinorInt(
+        (variant && variant.price != null ? majorToMinor(variant.price) : null) || product.priceMinor || majorToMinor(product.price || 0)
+      );
       const costAtPurchase = ensureMinorInt(product.costMinor || majorToMinor(product.cost || 0));
       const lineTotal = priceAtSale * line.quantity;
       totalAmount += lineTotal;
 
       saleLines.push({
         product,
+        variant,
         productId: product.id,
         productName: product.name,
-        stockBefore: product.stock,
+        stockBefore: variant ? variant.stock : product.stock,
         quantity: line.quantity,
         priceAtSale,
         costAtPurchase,
@@ -169,6 +202,30 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
         { transaction }
       );
 
+      // If this line targets a variant, decrement variant stock first
+      if (line.variant) {
+        const [updatedVariantRows] = await ProductVariant.update(
+          {
+            stock: sequelize.literal(`stock - ${line.quantity}`),
+          },
+          {
+            where: {
+              id: line.variant.id,
+              ShopId: shopId,
+              stock: { [Op.gte]: line.quantity },
+            },
+            transaction,
+          }
+        );
+
+        if (updatedVariantRows !== 1) {
+          throw new PosSaleError(
+            409,
+            `Variant stock changed while processing ${line.productName}. Please retry sale.`
+          );
+        }
+      }
+
       const [updatedRows] = await Product.update(
         {
           stock: sequelize.literal(`stock - ${line.quantity}`),
@@ -194,6 +251,7 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
         await consumeInventoryLotsFifo({
           shopId,
           product: line.product,
+          productVariantId: line.variant ? line.variant.id : null,
           quantity: line.quantity,
           reason: "POS_SALE",
           referenceType: "OFFLINE_SALE",
@@ -205,6 +263,7 @@ const createPosSale = async ({ shopId, userId, items, note }) => {
           metadata: {
             productName: line.productName,
             priceAtSaleMinor: line.priceAtSale,
+            variantId: line.variant ? line.variant.id : null,
           },
           transaction,
         });

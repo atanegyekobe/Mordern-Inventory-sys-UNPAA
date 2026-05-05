@@ -132,6 +132,7 @@ const ensureLotCoverageForProductStock = async ({
 const consumeInventoryLotsFifo = async ({
   shopId,
   product,
+  productVariantId = null,
   quantity,
   reason,
   referenceType = null,
@@ -162,6 +163,7 @@ const consumeInventoryLotsFifo = async ({
   const lots = await getOpenLots({
     shopId,
     productId: product.id,
+    productVariantId,
     transaction,
     lock: true,
   });
@@ -214,6 +216,7 @@ const consumeInventoryLotsFifo = async ({
     await logInventoryMovement({
       shopId,
       productId: product.id,
+      productVariantId: productVariantId || null,
       movementType: MOVEMENT_TYPES.OUT,
       changeQty: -consumed,
       quantityAfter: runningProductQtyAfter,

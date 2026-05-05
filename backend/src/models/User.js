@@ -20,6 +20,7 @@ module.exports = (sequelize) =>
       },
       passwordHash: {
         type: DataTypes.STRING,
+        field: "password_hash",
         allowNull: false,
       },
       role: {

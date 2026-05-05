@@ -83,6 +83,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+
 app.use("/api", routes);
 app.use(notFound);
 app.use(errorHandler);

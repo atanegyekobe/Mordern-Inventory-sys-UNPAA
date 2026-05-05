@@ -5,14 +5,23 @@ import { useRouter } from "next/navigation";
 type BackButtonProps = {
   label?: string;
   className?: string;
+  to?: string;
 };
 
-export default function BackButton({ label = "Back", className = "" }: BackButtonProps) {
+export default function BackButton({ label = "Back", className = "", to }: BackButtonProps) {
   const router = useRouter();
+
+  const handleClick = () => {
+    if (to) {
+      router.push(to);
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <button
-      onClick={() => router.back()}
+      onClick={handleClick}
       className={`inline-flex items-center gap-2 text-sm font-semibold text-black/60 hover:text-black transition ${className}`}
     >
       <svg

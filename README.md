@@ -557,35 +557,57 @@ npm run lint         # Run ESLint
 
 ## 🚀 Deployment
 
-### Backend Deployment (Heroku/Railway/Render)
-1. Set environment variables:
-   - `NODE_ENV=production`
-   - `DATABASE_URL` (PostgreSQL connection string)
-   - `JWT_SECRET` (strong random string)
-   - `CLIENT_ORIGIN` (frontend production URL)
-   - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`
+### Recommended Free Demo Stack
+- Frontend: Vercel
+- Backend: Render free web service
+- Database: Neon free PostgreSQL
 
-2. Build and deploy:
-   ```bash
-   npm install --production
-  npm run db:migrate
-   npm run db:seed-admin
-   npm start
-   ```
+This project is already wired for that setup:
+- The frontend reads `NEXT_PUBLIC_API_BASE_URL`
+- The backend reads `DATABASE_URL` and `CLIENT_ORIGIN`
+- Render already has a backend manifest in `render.yaml`
 
-### Frontend Deployment
-1. Set environment variable:
-  - `NEXT_PUBLIC_API_BASE_URL` (production API URL)
+### Backend Deployment on Render
+1. Create a free PostgreSQL database on Neon.
+2. Deploy the backend using `render.yaml`.
+3. Set these environment variables in Render:
+  - `NODE_ENV=production`
+  - `DATABASE_URL` (Neon PostgreSQL connection string)
+  - `JWT_SECRET` (strong random string)
+  - `CLIENT_ORIGIN` (your Vercel frontend URL)
+  - `ADMIN_EMAIL`
+  - `ADMIN_PASSWORD`
+  - `ADMIN_NAME`
+4. Render will run:
+  - `npm install`
+  - `npm run db:migrate`
+  - `npm start`
 
-2. Build frontend:
-  ```bash
-  npm run build
-  ```
+### Frontend Deployment on Vercel
+1. Import the `frontend/` folder as a Next.js project.
+2. Set this environment variable in Vercel:
+  - `NEXT_PUBLIC_API_BASE_URL` (your Render backend API URL, for example `https://your-backend.onrender.com/api`)
+3. Build command:
+  - `npm run build`
+4. Start command:
+  - `npm run start`
 
-3. Start frontend in production mode:
-  ```bash
-  npm run start
-  ```
+### Local Environment Example
+Backend `.env`:
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://...
+JWT_SECRET=replace-with-a-long-random-secret
+CLIENT_ORIGIN=https://your-frontend.vercel.app
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-me
+ADMIN_NAME=Admin
+```
+
+Frontend `.env.local`:
+```env
+NEXT_PUBLIC_API_BASE_URL=https://your-backend.onrender.com/api
+```
 
 ## 🐛 Troubleshooting
 

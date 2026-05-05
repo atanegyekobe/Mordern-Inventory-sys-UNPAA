@@ -11,6 +11,7 @@ const createOfflineSaleItem = require("./OfflineSaleItem");
 const createInventoryMovement = require("./InventoryMovement");
 const createInventoryLot = require("./InventoryLot");
 const createOfflineSaleItemLotAllocation = require("./OfflineSaleItemLotAllocation");
+const createStockRequest = require("./StockRequest");
 
 const User = createUser(sequelize);
 const Shop = createShop(sequelize);
@@ -24,6 +25,7 @@ const OfflineSaleItem = createOfflineSaleItem(sequelize);
 const InventoryMovement = createInventoryMovement(sequelize);
 const InventoryLot = createInventoryLot(sequelize);
 const OfflineSaleItemLotAllocation = createOfflineSaleItemLotAllocation(sequelize);
+const StockRequest = createStockRequest(sequelize);
 
 User.hasMany(Shop, { foreignKey: "ownerId", as: "OwnedShops" });
 Shop.belongsTo(User, { foreignKey: "ownerId", as: "Owner" });
@@ -140,6 +142,29 @@ Product.hasMany(ProductVariant, {
 });
 ProductVariant.belongsTo(Product);
 
+Shop.hasMany(StockRequest, { foreignKey: { allowNull: false } });
+StockRequest.belongsTo(Shop);
+
+Product.hasMany(StockRequest, { foreignKey: { allowNull: false } });
+StockRequest.belongsTo(Product);
+
+User.hasMany(StockRequest, {
+  foreignKey: "RequesterId",
+  as: "StockRequestsCreated",
+});
+StockRequest.belongsTo(User, {
+  foreignKey: "RequesterId",
+  as: "Requester",
+});
+
+User.hasMany(StockRequest, {
+  foreignKey: "approvedBy",
+  as: "StockRequestsApproved",
+});
+StockRequest.belongsTo(User, {
+  foreignKey: "approvedBy",
+  as: "Approver",
+});
 
 module.exports = {
   sequelize,
@@ -155,4 +180,5 @@ module.exports = {
   InventoryMovement,
   InventoryLot,
   OfflineSaleItemLotAllocation,
+  StockRequest,
 };

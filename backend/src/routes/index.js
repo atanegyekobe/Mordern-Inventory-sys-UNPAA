@@ -7,6 +7,7 @@ const adminRoutes = require("./admin");
 const customerRoutes = require("./customers");
 const aiRoutes = require("./ai");
 const posRoutes = require("./pos");
+const stockRequestRoutes = require("./stockRequests");
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use("/admin", adminRoutes);
 router.use("/customers", customerRoutes);
 router.use("/ai", aiRoutes);
 router.use("/pos", posRoutes);
+router.use("/stock-requests", stockRequestRoutes);
 
 module.exports = router;
