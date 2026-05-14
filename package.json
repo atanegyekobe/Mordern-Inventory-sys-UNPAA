@@ -1,42 +1,12 @@
 {
-  "name": "unpaa-inventory-desktop",
+  "name": "unpaa-inventory",
   "version": "1.0.0",
-  "main": "electron/main.js",
-  "build": {
-    "appId": "com.yourapp.desktop",
-    "productName": "UNPAA Inventory System",
-    "asar": false,
-    "files": [
-      "frontend/**/*",
-      "backend/**/*",
-      "electron/**/*",
-      "node_modules/**/*",
-      {
-        "from": "backend/node_modules",
-        "to": "backend/node_modules",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "signAndEditExecutable": false
-    }
-  },
   "scripts": {
     "client": "cd frontend && npm run dev",
-    "server": "cd backend && npm run dev",
-    "electron": "electron .",
-    "dev:desktop": "concurrently \"npm run server\" \"npm run client\" \"wait-on http://localhost:3000 && npm run electron\""
+    "server": "cd backend && npm run dev"
   },
   "dependencies": {
     "zod": "^4.3.6"
   },
-  "devDependencies": {
-    "concurrently": "^9.2.1",
-    "electron": "^41.2.0",
-    "electron-builder": "^26.8.1",
-    "wait-on": "^9.0.4"
-  }
+  "devDependencies": {}
 }
