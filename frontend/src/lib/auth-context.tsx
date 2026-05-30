@@ -20,7 +20,7 @@ export type ShopSummary = {
 };
 
 export type AuthResponse = {
-  token: string;
+  token?: string; // Token now stored in HTTP-only cookie, not needed in response
   user: User;
   shops?: ShopSummary[];
   activeShopId?: string | null;
@@ -39,7 +39,7 @@ type AuthContextValue = {
   refreshUser: () => Promise<void>;
 };
 
-const TOKEN_STORAGE_KEY = "ellora_token";
+// Token is now stored in HTTP-only secure cookie (managed by server)
 const SHOPS_STORAGE_KEY = "ellora_shops";
 const ACTIVE_SHOP_STORAGE_KEY = "ellora_active_shop_id";
 
@@ -100,24 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
     
     try {
-      const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
-      if (!token) {
-        setUser(null);
-        setShops([]);
-        setActiveShopId(null);
-        setIsLoading(false);
-        return;
-      }
-
       hydrateShopStateFromStorage();
 
+      // Token is in HTTP-only cookie; Axios will send it automatically with withCredentials
       const response = await api.get("/auth/me");
       setUser(response.data.user);
     } catch {
       setUser(null);
       setShops([]);
       setActiveShopId(null);
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
       window.localStorage.removeItem(SHOPS_STORAGE_KEY);
       window.localStorage.removeItem(ACTIVE_SHOP_STORAGE_KEY);
     } finally {
@@ -137,10 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const nextShops = payload.shops || [];
     const nextActiveShopId = payload.activeShopId || null;
 
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, payload.token);
-    }
-
+    // Token is automatically set as HTTP-only cookie by backend
+    // No need to store in localStorage
     saveShopState(nextShops, nextActiveShopId);
     await refreshUser();
   };
@@ -161,11 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveShopState(nextShops, activeShopId);
   };
 
-  const logout = () => {
+  const logout = async () => {
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
       window.localStorage.removeItem(SHOPS_STORAGE_KEY);
       window.localStorage.removeItem(ACTIVE_SHOP_STORAGE_KEY);
+      // HTTP-only cookie will be cleared by server on logout endpoint (if implemented)
+      try {
+        await api.post("/auth/logout");
+      } catch {
+        // Ignore logout errors
+      }
     }
     setUser(null);
     setShops([]);

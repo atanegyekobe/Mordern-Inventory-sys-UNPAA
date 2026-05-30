@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import NavBar from "@/components/NavBar";
+import dynamic from "next/dynamic";
+const NavBar = dynamic(() => import("@/components/NavBar"), { ssr: false });
 import api from "@/lib/api";
 import { type AuthResponse, useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/useToast";
@@ -31,7 +32,9 @@ export default function LoginPage() {
     const hasShops = (payload.shops?.length || 0) > 0;
     const isAdminUser = payload.user.role === "admin" || hasShops;
     toast.success("Signed in successfully!");
-    setTimeout(() => router.push(isAdminUser ? "/admin/dashboard" : "/shop"), 800);
+    // Redirect to appropriate page based on user role
+    const redirectTo = isAdminUser ? "/admin" : "/shop";
+    setTimeout(() => router.push(redirectTo), 800);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {

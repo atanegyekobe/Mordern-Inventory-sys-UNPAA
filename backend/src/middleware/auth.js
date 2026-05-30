@@ -3,10 +3,17 @@ const config = require("../config/env");
 const { User } = require("../models");
 
 const getTokenFromRequest = (req) => {
+  // Try Authorization header first (for backward compatibility)
   const authHeader = req.headers.authorization || "";
   if (authHeader.startsWith("Bearer ")) {
     return authHeader.slice(7);
   }
+  
+  // Try HTTP-only cookie (primary method for production)
+  if (req.cookies?.ellora_token) {
+    return req.cookies.ellora_token;
+  }
+  
   return null;
 };
 

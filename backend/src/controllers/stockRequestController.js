@@ -2,7 +2,9 @@ const {
   StockRequest,
   Product,
   User,
+  sequelize,
 } = require("../models");
+const { createInventoryLot } = require("../services/inventoryLotService");
 
 const createStockRequest = async (req, res, next) => {
   try {
@@ -141,27 +143,56 @@ const approveStockRequest = async (req, res, next) => {
     }
 
     const product = request.Product;
-    const newStock = Number(product.stock || 0) + Number(request.quantity || 0);
+    const qty = Number(request.quantity || 0);
 
-    await request.update({
-      status: "approved",
-      approvedBy: req.user.id,
-      approvedAt: new Date(),
-    });
+    // Use a transaction to update request, create lot (and movement) and update product stock atomically
+    const tx = await sequelize.transaction();
+    try {
+      // Mark request approved
+      await request.update(
+        {
+          status: "approved",
+          approvedBy: req.user.id,
+          approvedAt: new Date(),
+        },
+        { transaction: tx }
+      );
 
-    await product.update({ stock: newStock });
+      const productBefore = Number(product.stock || 0);
 
-    return res.json({
-      id: request.id,
-      status: request.status,
-      approvedAt: request.approvedAt,
-      approvedBy: {
-        id: req.user.id,
-        name: req.user.name,
-      },
-      productNewStock: newStock,
-      message: `Stock request approved. ${request.Product.name} stock increased by ${request.quantity}.`,
-    });
+      // Create inventory lot which will also log an IN movement via the service
+      await createInventoryLot({
+        shopId: req.shopId,
+        productId: product.id,
+        quantity: qty,
+        sourceType: "STOCK_REQUEST",
+        sourceRefId: request.id,
+        note: request.reason || null,
+        createdByUserId: req.user.id,
+        productQuantityBefore: productBefore,
+        transaction: tx,
+      });
+
+      const newStock = productBefore + qty;
+      await product.update({ stock: newStock }, { transaction: tx });
+
+      await tx.commit();
+
+      return res.json({
+        id: request.id,
+        status: request.status,
+        approvedAt: request.approvedAt,
+        approvedBy: {
+          id: req.user.id,
+          name: req.user.name,
+        },
+        productNewStock: newStock,
+        message: `Stock request approved. ${request.Product.name} stock increased by ${request.quantity}.`,
+      });
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
   } catch (error) {
     return next(error);
   }

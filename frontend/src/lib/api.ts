@@ -5,18 +5,14 @@ const resolveApiBaseUrl = () =>
 
 const api = axios.create({
   baseURL: resolveApiBaseUrl(),
+  withCredentials: true, // Enable cookie handling for HTTP-only auth tokens
 });
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("ellora_token");
     const activeShopId = window.localStorage.getItem("ellora_active_shop_id");
 
     config.headers = config.headers ?? {};
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
 
     if (activeShopId) {
       config.headers["x-shop-id"] = activeShopId;
